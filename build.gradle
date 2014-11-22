@@ -1,0 +1,95 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: "com.github.rodionmoiseev.gradle.plugins", name: "idea-utils", version: "0.2"
+    }
+}
+
+apply plugin: "java"
+apply plugin: "maven"
+apply plugin: "idea"
+apply plugin: "eclipse"
+apply plugin: "idea-utils"
+
+archivesBaseName = "j8051"
+group = "net.dries007.j8051"
+
+version = "0.1.0"
+if (System.getenv().BUILD_NUMBER != null) version += "." + System.getenv().BUILD_NUMBER
+
+def vendor = "Dries007"
+def gitURL = "github.com/Dries007/j8051"
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+//noinspection GroovyAssignabilityCheck
+configurations {
+    compile
+    deployJars
+}
+
+idea {
+    project {
+        copyright {
+            name = "Copyright"
+            license = file("LICENSE.txt")
+        }
+        runConfigurations {
+            Launcher {
+                name = "Run"
+                type = "Application"
+                mainClass = project.group + ".Main"
+                file("run/").mkdir()
+                module = project
+                workingDirectory = file("run/")
+            }
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+//noinspection GroovyAssignabilityCheck
+dependencies {
+    compile group: "org.apache.commons", name: "commons-io", version: "1.3.2"
+    compile group: "org.apache.commons", name: "commons-lang3", version: "3.3.2"
+    compile group: "commons-codec", name: "commons-codec", version: "1.10"
+}
+
+jar {
+    from "LICENSE.txt"
+    from configurations.runtime.asFileTree.files.collect { zipTree(it) }
+
+    manifest {
+        attributes(
+                "Created-By": vendor,
+                "Specification-Title": project.name,
+                "Specification-Version": project.version,
+                "Specification-Vendor": vendor,
+                "Implementation-Title": project.name,
+                "Implementation-Version": project.version,
+                "Implementation-Vendor": vendor,
+                "Main-Class": project.group + ".Main"
+        )
+    }
+}
+
+task sourcesJar(type: Jar) {
+    from "LICENSE.txt"
+    from sourceSets.main.allSource
+    classifier = 'src'
+}
+
+artifacts {
+    archives jar
+    archives sourcesJar
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.0'
+}
