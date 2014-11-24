@@ -32,23 +32,49 @@
 package net.dries007.j8051.preprocessor;
 
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
+ * Warning: Regex madness ahead.
  * @author Dries007
  */
 public class Macro
 {
-    String name;
-    String[] args;
-    String text;
+    private String name;
+    private String[] args;
+    private String text;
+    private Pattern pattern;
 
     public Macro(Matcher matcher)
     {
         name = matcher.group(1);
-
-        for (int i = 0; i < matcher.groupCount(); i++)
+        args = matcher.group(2) != null ? matcher.group(2).split(", ?") : null;
+        text = matcher.group(3);
+        if (args != null)
         {
-            System.out.printf("GROUP %d: %s\n", i, matcher.group(i));
+            StringBuilder patternBuilder = new StringBuilder();
+            patternBuilder.append(name).append("\\(");
+            for (int i = 0; i < args.length; i++)
+            {
+                patternBuilder.append("([^,]+?)");
+                if (i != args.length - 1) patternBuilder.append(", ?");
+            }
+            patternBuilder.append("\\)");
+            System.out.println(patternBuilder.toString());
+            pattern = Pattern.compile(patternBuilder.toString());
         }
+    }
+
+    public String acton(String line)
+    {
+        if (args == null) return line.replace(name, text);
+        Matcher matcher = pattern.matcher(line);
+        if (!matcher.find()) return line;
+        String replacement = text;
+        for (int i = 0; i < args.length; i++)
+        {
+            replacement = replacement.replace(args[i], matcher.group(i + 1));
+        }
+        return matcher.replaceFirst(replacement);
     }
 }

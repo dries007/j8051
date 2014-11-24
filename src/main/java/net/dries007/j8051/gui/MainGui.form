@@ -68,6 +68,29 @@
               </scrollpane>
             </children>
           </grid>
+          <grid id="fd8f0" layout-manager="GridBagLayout">
+            <constraints>
+              <tabbedpane title="Untitled"/>
+            </constraints>
+            <properties/>
+            <border type="none" title="Symbols"/>
+            <children>
+              <scrollpane id="8511d">
+                <constraints>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                  <gridbag weightx="1.0" weighty="1.0"/>
+                </constraints>
+                <properties/>
+                <border type="none"/>
+                <children>
+                  <component id="c8a3c" class="javax.swing.JTable" binding="symbolsTable">
+                    <constraints/>
+                    <properties/>
+                  </component>
+                </children>
+              </scrollpane>
+            </children>
+          </grid>
         </children>
       </tabbedpane>
       <component id="949fb" class="javax.swing.JMenuBar" binding="menuBar" custom-create="true">

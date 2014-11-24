@@ -9,6 +9,8 @@ No it can't do C. No I won't add C support. There are plenty of C compilers for 
 
 It can compile and decompile to and from hex files, while showing you the steps in between to allow easy debugging.
 
+For the list of things (not) done, [look at the todo file.](/todo.md)
+
 Why?
 ----
 

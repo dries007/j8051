@@ -35,9 +35,7 @@ import net.dries007.j8051.preprocessor.Preprocessor;
 import net.dries007.j8051.util.FileWatcher;
 import net.dries007.j8051.util.JFontChooser;
 import org.apache.commons.io.FileUtils;
-import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import javax.swing.*;
@@ -74,6 +72,7 @@ public class MainGui
     private       JMenuBar          menuBar;
     private       RSyntaxTextArea   asmContents;
     private JTextArea         preContents;
+    private JTable            symbolsTable;
     private JCheckBoxMenuItem autoLoad;
     private JCheckBoxMenuItem autoSave;
     private JCheckBoxMenuItem autoCompile;
@@ -234,7 +233,7 @@ public class MainGui
     public void init()
     {
         changeFile();
-        setPreContents();
+        compile();
         DOCUMENT_LISTENER.start();
         asmContents.getDocument().addDocumentListener(DOCUMENT_LISTENER);
 
@@ -288,11 +287,13 @@ public class MainGui
         }
     }
 
-    public void setPreContents()
+    public void compile()
     {
         try
         {
             preContents.setText(Preprocessor.PREPROCESSOR.process(asmContents.getText()));
+
+
         }
         catch (Exception e)
         {
@@ -442,6 +443,20 @@ public class MainGui
         preContents.setEditable(false);
         preContents.setEnabled(true);
         scrollPane1.setViewportView(preContents);
+        final JPanel panel3 = new JPanel();
+        panel3.setLayout(new GridBagLayout());
+        tabPane.addTab("Untitled", panel3);
+        panel3.setBorder(BorderFactory.createTitledBorder("Symbols"));
+        final JScrollPane scrollPane2 = new JScrollPane();
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        panel3.add(scrollPane2, gbc);
+        symbolsTable = new JTable();
+        scrollPane2.setViewportView(symbolsTable);
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 0;

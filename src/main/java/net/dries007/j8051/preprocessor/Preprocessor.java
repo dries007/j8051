@@ -35,23 +35,32 @@ import net.dries007.j8051.Main;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static net.dries007.j8051.util.Constants.ENCODING;
+import static net.dries007.j8051.util.Constants.PROPERTIES;
+
 /**
+ * Warning: Regex madness ahead.
  * @author Dries007
  */
 public class Preprocessor
 {
     public static final Preprocessor PREPROCESSOR = new Preprocessor();
     public static final char         PREFIX = '#';
-    public static final Pattern      INCLUDE_A = Pattern.compile("^#include[\\s]+\"(.*)\"$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern      INCLUDE_R = Pattern.compile("^#include[\\s]+<(.*)>$", Pattern.CASE_INSENSITIVE);
-    //public static final Pattern      DEFINE = Pattern.compile("^#define[\\s]+([\\S]*)(.*)$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern      DEFINE = Pattern.compile("^#define[\\s]+(\\w+?)(\\(((\\w*?)(,\\s*?)?)+\\))? (.*)$", Pattern.CASE_INSENSITIVE);
-
-    private HashMap<String, Macro> symbols = new HashMap<>();
+    public static final Pattern      INCLUDE_A   = Pattern.compile("^#include[\\s]+\"(.*)\"$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern      INCLUDE_R   = Pattern.compile("^#include[\\s]+<(.*)>$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern      DEFINE      = Pattern.compile("^#define[\\s]+(\\w+?)(?:\\((.*)\\))? (.*)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern      UNDEFINE    = Pattern.compile("^#undefine[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern      IFDEF       = Pattern.compile("^#ifdef[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern      IFNDEF      = Pattern.compile("^#ifndef[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern      ELSE        = Pattern.compile("^#else[\\s]*$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern      ENDIF       = Pattern.compile("^#endif[\\s]*$", Pattern.CASE_INSENSITIVE);
 
     private Preprocessor()
     {
@@ -60,33 +69,105 @@ public class Preprocessor
 
     public String process(String text) throws Exception
     {
+        HashMap<String, Macro> symbols = new HashMap<>();
         StringBuilder stringBuilder = new StringBuilder(text.length());
-
-        String[] lines = text.split("[\r\n]+");
-        for (String line : lines)
+        LinkedList<Boolean> ifList = new LinkedList<>();
+        ArrayList<String> list = new ArrayList<>(Arrays.asList(text.split("[\r\n]+")));
+        boolean lastBlanck = false;
+        for (int i = 0; i < list.size(); i++)
         {
+            String line = list.get(i).trim();
+            line = line.replaceFirst(";.*", "");
+            if (line.length() == 0)
+            {
+                if (!lastBlanck)
+                {
+                    stringBuilder.append('\n');
+                    lastBlanck = true;
+                }
+                continue;
+            }
+            lastBlanck = false;
             if (line.charAt(0) == PREFIX)
             {
                 Matcher matcher = INCLUDE_A.matcher(line);
                 if (matcher.matches())
                 {
-                    stringBuilder.append(process(FileUtils.readFileToString(new File(matcher.group(1))))).append('\n');
+                    list.remove(i);
+                    //noinspection unchecked
+                    list.addAll(i, FileUtils.readLines(new File(matcher.group(1)), PROPERTIES.getProperty(ENCODING, "Cp1252")));
                     continue;
                 }
                 matcher = INCLUDE_R.matcher(line);
                 if (matcher.matches())
                 {
-                    stringBuilder.append(process(FileUtils.readFileToString(new File(Main.includeFile, matcher.group(1))))).append('\n');
+                    list.remove(i);
+                    //noinspection unchecked
+                    list.addAll(i, FileUtils.readLines(new File(Main.includeFile, matcher.group(1)), PROPERTIES.getProperty(ENCODING, "Cp1252")));
                     continue;
                 }
                 matcher = DEFINE.matcher(line);
                 if (matcher.matches())
                 {
+                    if (symbols.containsKey(matcher.group(1))) throw new Exception(matcher.group(1) + " already defined.");
                     symbols.put(matcher.group(1), new Macro(matcher));
                     continue;
                 }
+                matcher = UNDEFINE.matcher(line);
+                if (matcher.matches())
+                {
+                    symbols.remove(matcher.group(1));
+                    continue;
+                }
+                matcher = IFDEF.matcher(line);
+                if (matcher.matches())
+                {
+                    ifList.add(symbols.containsKey(matcher.group(1)));
+                    System.out.println(ifList.getLast());
+                    continue;
+                }
+                matcher = IFNDEF.matcher(line);
+                if (matcher.matches())
+                {
+                    ifList.add(!symbols.containsKey(matcher.group(1)));
+                    System.out.println(ifList.getLast());
+                    continue;
+                }
+                matcher = ELSE.matcher(line);
+                if (matcher.matches())
+                {
+                    ifList.add(!ifList.removeLast());
+                    System.out.println(ifList.getLast());
+                    continue;
+                }
+                matcher = ENDIF.matcher(line);
+                if (matcher.matches())
+                {
+                    ifList.removeLast();
+                    continue;
+                }
             }
-            else stringBuilder.append(line).append('\n');
+            else
+            {
+                if (ifList.isEmpty() || ifList.getLast())
+                {
+                    boolean changes;
+                    do
+                    {
+                        changes = false;
+                        for (String key : symbols.keySet())
+                        {
+                            if (line.contains(key))
+                            {
+                                String oldLine = line;
+                                line = symbols.get(key).acton(line);
+                                if (!oldLine.equals(line)) changes = true;
+                            }
+                        }
+                    } while (changes);
+                    stringBuilder.append(line).append('\n');
+                }
+            }
         }
         return stringBuilder.toString();
     }
