@@ -70,6 +70,7 @@ public class AsmDocumentListener extends Thread implements DocumentListener
             {
                 if (System.currentTimeMillis() - lastUpdate > 1000 && MainGui.MAIN_GUI.isAutoSaving())
                 {
+                    if (MainGui.MAIN_GUI.isAutoCompiling()) MainGui.MAIN_GUI.setPreContents();
                     MainGui.MAIN_GUI.saveChanges();
                     break;
                 }

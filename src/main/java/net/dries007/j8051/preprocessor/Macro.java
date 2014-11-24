@@ -26,32 +26,29 @@
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 
-package net.dries007.j8051.gui;
+package net.dries007.j8051.preprocessor;
 
-import org.apache.commons.io.FilenameUtils;
-
-import javax.swing.filechooser.FileFilter;
-import java.io.File;
+import java.util.regex.Matcher;
 
 /**
  * @author Dries007
  */
-public class GuiConstants
+public class Macro
 {
-    public static final FileFilter ASM_FILE_FILTER = new FileFilter()
-    {
-        @Override
-        public boolean accept(File f)
-        {
-            return FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("asm") || f.isDirectory();
-        }
+    String name;
+    String[] args;
+    String text;
 
-        @Override
-        public String getDescription()
+    public Macro(Matcher matcher)
+    {
+        name = matcher.group(1);
+
+        for (int i = 0; i < matcher.groupCount(); i++)
         {
-            return "*.asm | ASM text fimes";
+            System.out.printf("GROUP %d: %s\n", i, matcher.group(i));
         }
-    };
+    }
 }

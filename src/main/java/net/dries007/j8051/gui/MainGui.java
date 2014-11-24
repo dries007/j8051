@@ -31,14 +31,18 @@
 package net.dries007.j8051.gui;
 
 import net.dries007.j8051.Main;
+import net.dries007.j8051.preprocessor.Preprocessor;
 import net.dries007.j8051.util.FileWatcher;
 import net.dries007.j8051.util.JFontChooser;
 import org.apache.commons.io.FileUtils;
+import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
+import org.fife.ui.rtextarea.RTextScrollPane;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
-import javax.swing.text.PlainDocument;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
@@ -47,7 +51,6 @@ import java.io.IOException;
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
-import static net.dries007.j8051.gui.GuiConstants.ASM_FILE_FILTER;
 import static net.dries007.j8051.util.AsmDocumentListener.DOCUMENT_LISTENER;
 import static net.dries007.j8051.util.Constants.*;
 
@@ -58,26 +61,41 @@ public class MainGui
 {
     public static final MainGui MAIN_GUI = new MainGui();
     private static FileWatcher fileWatcher;
-    public final JFileChooser fileChooser = new JFileChooser();
-    public final JFontChooser fontChooser = new JFontChooser();
+    public final JFileChooser fileChooser   = new JFileChooser();
+    public final JFileChooser folderChooser = new JFileChooser();
+    public final JFontChooser fontChooser   = new JFontChooser();
     private final JFrame            frame;
     private       JTabbedPane       tabPane;
     private       JMenuItem         loadFile;
     private       JMenuItem         saveFile;
     private       JMenuItem         changeFont;
-    private       JEditorPane       asmContents;
+    private       JMenuItem         changeTabSize;
     private       JPanel            root;
     private       JMenuBar          menuBar;
-    private       JMenu             fileMenu;
-    private       JMenu             viewMenu;
-    private       JCheckBoxMenuItem autoLoad;
-    private       JCheckBoxMenuItem autoSave;
-    private       JCheckBoxMenuItem autoCompile;
-    ;
+    private       RSyntaxTextArea   asmContents;
+    private JTextArea         preContents;
+    private JCheckBoxMenuItem autoLoad;
+    private JCheckBoxMenuItem autoSave;
+    private JCheckBoxMenuItem autoCompile;
+    private JMenuItem         includeFolder;
 
     private MainGui()
     {
         $$$setupUI$$$();
+
+//        AbstractTokenMakerFactory atmf = (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
+//        atmf.putMapping("text/8051", AsmTokenMaker.class.getName());
+//        asmContents.setSyntaxEditingStyle("text/8051");
+
+        fontChooser.setSelectedFontFamily(PROPERTIES.getProperty(FONT_NAME, "Courier New"));
+        fontChooser.setSelectedFontStyle(Integer.parseInt(PROPERTIES.getProperty(FONT_STYLE, Integer.toString(Font.PLAIN))));
+        fontChooser.setSelectedFontSize(Integer.parseInt(PROPERTIES.getProperty(FONT_SIZE, "12")));
+
+        asmContents.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
+        asmContents.setFont(fontChooser.getSelectedFont());
+
+        preContents.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
+        preContents.setFont(fontChooser.getSelectedFont());
 
         // Main gui init
 
@@ -159,8 +177,6 @@ public class MainGui
                 }
             }
         });
-
-        asmContents.getDocument().putProperty(PlainDocument.tabSizeAttribute, 4);
         autoLoad.addActionListener(new ActionListener()
         {
             @Override
@@ -185,11 +201,40 @@ public class MainGui
                 PROPERTIES.setProperty(AUTO_SAVE, Boolean.toString(autoSave.getState()));
             }
         });
+        changeTabSize.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                try
+                {
+                    int i = Integer.parseInt(JOptionPane.showInputDialog(frame, "Tab size?", "Tab size", JOptionPane.QUESTION_MESSAGE));
+                    PROPERTIES.setProperty(TABSIZE, Integer.toString(i));
+                    asmContents.setTabSize(i);
+                }
+                catch (NumberFormatException ex)
+                {
+                    ex.printStackTrace();
+                }
+            }
+        });
+        includeFolder.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (folderChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION)
+                {
+                    Main.setIncludeFolder(folderChooser.getSelectedFile());
+                }
+            }
+        });
     }
 
     public void init()
     {
         changeFile();
+        setPreContents();
         DOCUMENT_LISTENER.start();
         asmContents.getDocument().addDocumentListener(DOCUMENT_LISTENER);
 
@@ -198,11 +243,6 @@ public class MainGui
             File file = new File(PROPERTIES.getProperty(SRC_FILE));
             if (file.exists()) fileChooser.setSelectedFile(file);
         }
-
-        fontChooser.setSelectedFontFamily(PROPERTIES.getProperty(FONT_NAME, "Courier New"));
-        fontChooser.setSelectedFontStyle(Integer.parseInt(PROPERTIES.getProperty(FONT_STYLE, Integer.toString(Font.PLAIN))));
-        fontChooser.setSelectedFontSize(Integer.parseInt(PROPERTIES.getProperty(FONT_SIZE, "12")));
-        asmContents.setFont(fontChooser.getSelectedFont());
     }
 
     public void changeFile()
@@ -248,6 +288,18 @@ public class MainGui
         }
     }
 
+    public void setPreContents()
+    {
+        try
+        {
+            preContents.setText(Preprocessor.PREPROCESSOR.process(asmContents.getText()));
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
     private void createUIComponents()
     {
         // Filechooser specifications
@@ -256,10 +308,17 @@ public class MainGui
         fileChooser.setMultiSelectionEnabled(false);
         fileChooser.setFileFilter(ASM_FILE_FILTER);
 
+        // Folderchooser specifications
+        folderChooser.addChoosableFileFilter(FOLDER_FILTER);
+        folderChooser.setFileHidingEnabled(true);
+        folderChooser.setMultiSelectionEnabled(false);
+        folderChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        folderChooser.setFileFilter(FOLDER_FILTER);
+
         //Menubar
         menuBar = new JMenuBar();
         //  Filemenu
-        fileMenu = new JMenu("File");
+        JMenu fileMenu = new JMenu("File");
 
         loadFile = new JMenuItem("Open...");
         fileMenu.add(loadFile);
@@ -282,13 +341,24 @@ public class MainGui
         fileMenu.add(autoCompile);
 
         menuBar.add(fileMenu);
-        //  Filemenu
-        viewMenu = new JMenu("View");
+        //  Viewmenu
+        JMenu viewMenu = new JMenu("View");
 
         changeFont = new JMenuItem("Font...");
         viewMenu.add(changeFont);
 
+        changeTabSize = new JMenuItem("Tab size...");
+        viewMenu.add(changeTabSize);
+
         menuBar.add(viewMenu);
+
+        //  optionsmenu
+        JMenu optionsMenu = new JMenu("Options");
+
+        includeFolder = new JMenuItem("Include folder");
+        optionsMenu.add(includeFolder);
+
+        menuBar.add(optionsMenu);
     }
 
     public boolean isAutoUpdating()
@@ -343,21 +413,35 @@ public class MainGui
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new GridBagLayout());
         tabPane.addTab("ASM file", panel1);
-        final JScrollPane scrollPane1 = new JScrollPane();
-        scrollPane1.setHorizontalScrollBarPolicy(32);
-        scrollPane1.setVerticalScrollBarPolicy(22);
+        final RTextScrollPane rTextScrollPane1 = new RTextScrollPane();
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
-        panel1.add(scrollPane1, gbc);
-        scrollPane1.setBorder(BorderFactory.createTitledBorder("Contents"));
-        asmContents = new JEditorPane();
-        asmContents.setEditable(true);
-        asmContents.setFont(new Font("Courier New", asmContents.getFont().getStyle(), asmContents.getFont().getSize()));
-        scrollPane1.setViewportView(asmContents);
+        panel1.add(rTextScrollPane1, gbc);
+        rTextScrollPane1.setBorder(BorderFactory.createTitledBorder("Source"));
+        asmContents = new RSyntaxTextArea();
+        asmContents.setFadeCurrentLineHighlight(false);
+        asmContents.setTabsEmulated(false);
+        asmContents.setText("");
+        rTextScrollPane1.setViewportView(asmContents);
+        final JPanel panel2 = new JPanel();
+        panel2.setLayout(new GridBagLayout());
+        tabPane.addTab("Pre-processed", panel2);
+        final JScrollPane scrollPane1 = new JScrollPane();
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        panel2.add(scrollPane1, gbc);
+        preContents = new JTextArea();
+        preContents.setEditable(false);
+        preContents.setEnabled(true);
+        scrollPane1.setViewportView(preContents);
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 0;

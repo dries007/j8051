@@ -22,22 +22,46 @@
             <properties/>
             <border type="none"/>
             <children>
-              <scrollpane id="7f35f">
+              <scrollpane id="cba6e" class="org.fife.ui.rtextarea.RTextScrollPane">
+                <constraints>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                  <gridbag weightx="1.0" weighty="1.0"/>
+                </constraints>
+                <properties/>
+                <border type="none" title="Source"/>
+                <children>
+                  <component id="94f4a" class="org.fife.ui.rsyntaxtextarea.RSyntaxTextArea" binding="asmContents">
+                    <constraints/>
+                    <properties>
+                      <fadeCurrentLineHighlight value="false"/>
+                      <tabsEmulated value="false"/>
+                      <text value=""/>
+                    </properties>
+                  </component>
+                </children>
+              </scrollpane>
+            </children>
+          </grid>
+          <grid id="436bb" layout-manager="GridBagLayout">
+            <constraints>
+              <tabbedpane title="Pre-processed"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <scrollpane id="6bb0a">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
                   <gridbag weightx="1.0" weighty="1.0"/>
                 </constraints>
-                <properties>
-                  <horizontalScrollBarPolicy value="32"/>
-                  <verticalScrollBarPolicy value="22"/>
-                </properties>
-                <border type="none" title="Contents"/>
+                <properties/>
+                <border type="none"/>
                 <children>
-                  <component id="377bf" class="javax.swing.JEditorPane" binding="asmContents">
+                  <component id="b04b0" class="javax.swing.JTextArea" binding="preContents">
                     <constraints/>
                     <properties>
-                      <editable value="true"/>
-                      <font name="Courier New"/>
+                      <editable value="false"/>
+                      <enabled value="true"/>
                     </properties>
                   </component>
                 </children>

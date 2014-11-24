@@ -31,7 +31,9 @@
 package net.dries007.j8051.util;
 
 import net.dries007.j8051.Main;
+import org.apache.commons.io.FilenameUtils;
 
+import javax.swing.filechooser.FileFilter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -60,6 +62,8 @@ public class Constants
     public static final String FONT_NAME         = "font.name";
     public static final String FONT_STYLE        = "font.style";
     public static final String FONT_SIZE         = "font.size";
+    public static final String TABSIZE           = "tabSize";
+    public static final String INCLUDEDIR        = "includedir";
 
     // Properties used for persistent stuff like preferences
     public static final Properties PROPERTIES = new Properties();
@@ -99,4 +103,34 @@ public class Constants
             }
         }));
     }
+
+    public static final FileFilter ASM_FILE_FILTER = new FileFilter()
+    {
+        @Override
+        public boolean accept(File f)
+        {
+            return FilenameUtils.getExtension(f.getName()).equalsIgnoreCase("asm") || f.isDirectory();
+        }
+
+        @Override
+        public String getDescription()
+        {
+            return "*.asm | ASM text fimes";
+        }
+    };
+
+    public static final FileFilter FOLDER_FILTER = new FileFilter()
+    {
+        @Override
+        public boolean accept(File f)
+        {
+            return f.isDirectory();
+        }
+
+        @Override
+        public String getDescription()
+        {
+            return "Directories";
+        }
+    };
 }

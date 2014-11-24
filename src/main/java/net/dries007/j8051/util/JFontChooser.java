@@ -56,46 +56,46 @@ public class JFontChooser extends JComponent
      *
      * @see #showDialog
      */
-    public static final  int      OK_OPTION                 = 0;
+    public static final  int        OK_OPTION                 = 0;
     /**
      * Return value from <code>showDialog()</code>.
      *
      * @see #showDialog
      */
-    public static final  int      CANCEL_OPTION             = 1;
+    public static final  int        CANCEL_OPTION             = 1;
     /**
      * Return value from <code>showDialog()</code>.
      *
      * @see #showDialog
      */
-    public static final  int      ERROR_OPTION              = -1;
+    public static final  int        ERROR_OPTION              = -1;
     // instance variables
-    protected int dialogResultValue = ERROR_OPTION;
-    private static final Font     DEFAULT_SELECTED_FONT     = new Font("Serif", Font.PLAIN, 12);
-    private static final Font     DEFAULT_FONT              = new Font("Dialog", Font.PLAIN, 10);
-    private static final int[]    FONT_STYLE_CODES          =
+    protected            int        dialogResultValue         = ERROR_OPTION;
+    private static final Font       DEFAULT_SELECTED_FONT     = new Font("Serif", Font.PLAIN, 12);
+    private static final Font       DEFAULT_FONT              = new Font("Dialog", Font.PLAIN, 10);
+    private static final int[]      FONT_STYLE_CODES          =
             {
                     Font.PLAIN, Font.BOLD, Font.ITALIC, Font.BOLD | Font.ITALIC
             };
-    private static final String[] DEFAULT_FONT_SIZE_STRINGS =
+    private static final String[]   DEFAULT_FONT_SIZE_STRINGS =
             {
                     "8", "9", "10", "11", "12", "14", "16", "18", "20",
                     "22", "24", "26", "28", "36", "48", "72",
             };
-    private String[]   fontStyleNames      = null;
-    private String[]   fontFamilyNames     = null;
-    private String[]   fontSizeStrings     = null;
-    private JTextField fontFamilyTextField = null;
-    private JTextField fontStyleTextField  = null;
-    private JTextField fontSizeTextField   = null;
-    private JList      fontNameList        = null;
-    private JList      fontStyleList       = null;
-    private JList      fontSizeList        = null;
-    private JPanel     fontNamePanel       = null;
-    private JPanel     fontStylePanel      = null;
-    private JPanel     fontSizePanel       = null;
-    private JPanel     samplePanel         = null;
-    private JTextField sampleText          = null;
+    private              String[]   fontStyleNames            = null;
+    private              String[]   fontFamilyNames           = null;
+    private              String[]   fontSizeStrings           = null;
+    private              JTextField fontFamilyTextField       = null;
+    private              JTextField fontStyleTextField        = null;
+    private              JTextField fontSizeTextField         = null;
+    private              JList      fontNameList              = null;
+    private              JList      fontStyleList             = null;
+    private              JList      fontSizeList              = null;
+    private              JPanel     fontNamePanel             = null;
+    private              JPanel     fontStylePanel            = null;
+    private              JPanel     fontSizePanel             = null;
+    private              JPanel     samplePanel               = null;
+    private              JTextField sampleText                = null;
 
     /**
      * Constructs a <code>JFontChooser</code> object.

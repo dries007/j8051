@@ -76,6 +76,7 @@ public class FileWatcher extends Thread
                         {
                             prevLastModified = lastModified;
                             if (MainGui.MAIN_GUI.isAutoUpdating()) MainGui.MAIN_GUI.setAsmContents();
+                            if (MainGui.MAIN_GUI.isAutoCompiling()) MainGui.MAIN_GUI.setPreContents();
                         }
                     }
                 }

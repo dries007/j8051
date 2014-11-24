@@ -31,10 +31,12 @@
 package net.dries007.j8051;
 
 import net.dries007.j8051.gui.MainGui;
+import net.dries007.j8051.util.Constants;
 
 import javax.swing.*;
 import java.io.File;
 
+import static net.dries007.j8051.util.Constants.INCLUDEDIR;
 import static net.dries007.j8051.util.Constants.PROPERTIES;
 import static net.dries007.j8051.util.Constants.SRC_FILE;
 
@@ -44,6 +46,7 @@ import static net.dries007.j8051.util.Constants.SRC_FILE;
 public class Main
 {
     public static File srcFile;
+    public static File includeFile;
     private static boolean enablegui = true;
 
     public static void main(String[] args) throws Exception
@@ -99,8 +102,10 @@ public class Main
         PROPERTIES.setProperty(SRC_FILE, srcFile == null ? "" : srcFile.getAbsolutePath());
     }
 
-    public static boolean isGuiEnabled()
+    public static void setIncludeFolder(File includeFile)
     {
-        return enablegui;
+        if (!includeFile.exists() || !includeFile.isDirectory()) includeFile = null;
+        Main.includeFile = includeFile;
+        PROPERTIES.setProperty(INCLUDEDIR, includeFile == null ? "" : includeFile.getAbsolutePath());
     }
 }
