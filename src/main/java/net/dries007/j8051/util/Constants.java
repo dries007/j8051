@@ -39,6 +39,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 /**
  * @author Dries007
@@ -64,6 +65,21 @@ public class Constants
     public static final String FONT_SIZE         = "font.size";
     public static final String TABSIZE           = "tabSize";
     public static final String INCLUDEDIR        = "includedir";
+
+    /*
+     * Regex
+     */
+    public static final Pattern INCLUDE_A = Pattern.compile("^#include[\\s]+\"(.*)\"$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern INCLUDE_R = Pattern.compile("^#include[\\s]+<(.*)>$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern DEFINE    = Pattern.compile("^#define[\\s]+(\\w+?)(?:\\((.*)\\))? (.*)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern UNDEFINE  = Pattern.compile("^#undefine[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern IFDEF     = Pattern.compile("^#ifdef[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern IFNDEF    = Pattern.compile("^#ifndef[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern ELSE      = Pattern.compile("^#else[\\s]*$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern ENDIF     = Pattern.compile("^#endif[\\s]*$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern EQU       = Pattern.compile("^(\\S+)+\\s*equ\\s*(.+)+$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern DATA      = Pattern.compile("^(\\S+)+\\s*data\\s*(.+)+$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern BIT       = Pattern.compile("^(\\S+)+\\s*bit\\s*(.+)+$", Pattern.CASE_INSENSITIVE);
 
     // Properties used for persistent stuff like preferences
     public static final Properties PROPERTIES = new Properties();

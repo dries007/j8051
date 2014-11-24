@@ -29,18 +29,21 @@
  *
  */
 
-package net.dries007.j8051.preprocessor;
+package net.dries007.j8051.compiler;
 
 import net.dries007.j8051.Main;
+import net.dries007.j8051.compiler.exceptions.CompileException;
+import net.dries007.j8051.compiler.exceptions.PreprocessorException;
+import net.dries007.j8051.util.Constants;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static net.dries007.j8051.util.Constants.ENCODING;
 import static net.dries007.j8051.util.Constants.PROPERTIES;
@@ -51,23 +54,13 @@ import static net.dries007.j8051.util.Constants.PROPERTIES;
  */
 public class Preprocessor
 {
-    public static final Preprocessor PREPROCESSOR = new Preprocessor();
     public static final char         PREFIX = '#';
-    public static final Pattern      INCLUDE_A   = Pattern.compile("^#include[\\s]+\"(.*)\"$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern      INCLUDE_R   = Pattern.compile("^#include[\\s]+<(.*)>$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern      DEFINE      = Pattern.compile("^#define[\\s]+(\\w+?)(?:\\((.*)\\))? (.*)$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern      UNDEFINE    = Pattern.compile("^#undefine[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern      IFDEF       = Pattern.compile("^#ifdef[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern      IFNDEF      = Pattern.compile("^#ifndef[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern      ELSE        = Pattern.compile("^#else[\\s]*$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern      ENDIF       = Pattern.compile("^#endif[\\s]*$", Pattern.CASE_INSENSITIVE);
 
     private Preprocessor()
     {
-
     }
 
-    public String process(String text) throws Exception
+    static String process(String text, LinkedList<Node> nodes) throws CompileException
     {
         HashMap<String, Macro> symbols = new HashMap<>();
         StringBuilder stringBuilder = new StringBuilder(text.length());
@@ -90,57 +83,71 @@ public class Preprocessor
             lastBlanck = false;
             if (line.charAt(0) == PREFIX)
             {
-                Matcher matcher = INCLUDE_A.matcher(line);
+                Matcher matcher = Constants.INCLUDE_A.matcher(line);
                 if (matcher.matches())
                 {
                     list.remove(i);
-                    //noinspection unchecked
-                    list.addAll(i, FileUtils.readLines(new File(matcher.group(1)), PROPERTIES.getProperty(ENCODING, "Cp1252")));
+                    try
+                    {
+                        //noinspection unchecked
+                        list.addAll(i, FileUtils.readLines(new File(matcher.group(1)), PROPERTIES.getProperty(ENCODING, "Cp1252")));
+                    }
+                    catch (IOException e)
+                    {
+                        throw new CompileException(e);
+                    }
                     continue;
                 }
-                matcher = INCLUDE_R.matcher(line);
+                matcher = Constants.INCLUDE_R.matcher(line);
                 if (matcher.matches())
                 {
                     list.remove(i);
-                    //noinspection unchecked
-                    list.addAll(i, FileUtils.readLines(new File(Main.includeFile, matcher.group(1)), PROPERTIES.getProperty(ENCODING, "Cp1252")));
+                    try
+                    {
+                        //noinspection unchecked
+                        list.addAll(i, FileUtils.readLines(new File(Main.includeFile, matcher.group(1)), PROPERTIES.getProperty(ENCODING, "Cp1252")));
+                    }
+                    catch (IOException e)
+                    {
+                        throw new CompileException(e);
+                    }
                     continue;
                 }
-                matcher = DEFINE.matcher(line);
+                matcher = Constants.DEFINE.matcher(line);
                 if (matcher.matches())
                 {
-                    if (symbols.containsKey(matcher.group(1))) throw new Exception(matcher.group(1) + " already defined.");
+                    if (symbols.containsKey(matcher.group(1))) throw new PreprocessorException(matcher.group(1) + " already defined.");
                     symbols.put(matcher.group(1), new Macro(matcher));
                     continue;
                 }
-                matcher = UNDEFINE.matcher(line);
+                matcher = Constants.UNDEFINE.matcher(line);
                 if (matcher.matches())
                 {
                     symbols.remove(matcher.group(1));
                     continue;
                 }
-                matcher = IFDEF.matcher(line);
+                matcher = Constants.IFDEF.matcher(line);
                 if (matcher.matches())
                 {
                     ifList.add(symbols.containsKey(matcher.group(1)));
                     System.out.println(ifList.getLast());
                     continue;
                 }
-                matcher = IFNDEF.matcher(line);
+                matcher = Constants.IFNDEF.matcher(line);
                 if (matcher.matches())
                 {
                     ifList.add(!symbols.containsKey(matcher.group(1)));
                     System.out.println(ifList.getLast());
                     continue;
                 }
-                matcher = ELSE.matcher(line);
+                matcher = Constants.ELSE.matcher(line);
                 if (matcher.matches())
                 {
                     ifList.add(!ifList.removeLast());
                     System.out.println(ifList.getLast());
                     continue;
                 }
-                matcher = ENDIF.matcher(line);
+                matcher = Constants.ENDIF.matcher(line);
                 if (matcher.matches())
                 {
                     ifList.removeLast();
@@ -165,6 +172,7 @@ public class Preprocessor
                             }
                         }
                     } while (changes);
+                    nodes.add(new UnresolvedNode(line));
                     stringBuilder.append(line).append('\n');
                 }
             }

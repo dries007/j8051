@@ -60,6 +60,7 @@ dependencies {
     compile group: "org.apache.commons", name: "commons-lang3", version: "3.3.2"
     compile group: "commons-codec", name: "commons-codec", version: "1.10"
     compile group: "com.fifesoft", name: "rsyntaxtextarea", version: "2.5.3"
+    compile group: "com.fathzer", name: "javaluator", version: "3.0.0"
 }
 
 jar {

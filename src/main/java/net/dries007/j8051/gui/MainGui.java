@@ -31,7 +31,7 @@
 package net.dries007.j8051.gui;
 
 import net.dries007.j8051.Main;
-import net.dries007.j8051.preprocessor.Preprocessor;
+import net.dries007.j8051.compiler.Compiler;
 import net.dries007.j8051.util.FileWatcher;
 import net.dries007.j8051.util.JFontChooser;
 import org.apache.commons.io.FileUtils;
@@ -39,6 +39,7 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import java.awt.*;
@@ -72,7 +73,7 @@ public class MainGui
     private       JMenuBar          menuBar;
     private       RSyntaxTextArea   asmContents;
     private JTextArea         preContents;
-    private JTable            symbolsTable;
+    private JTable            constantsTable;
     private JCheckBoxMenuItem autoLoad;
     private JCheckBoxMenuItem autoSave;
     private JCheckBoxMenuItem autoCompile;
@@ -289,16 +290,28 @@ public class MainGui
 
     public void compile()
     {
-        try
+        EventQueue.invokeLater(new Runnable()
         {
-            preContents.setText(Preprocessor.PREPROCESSOR.process(asmContents.getText()));
+            @Override
+            public void run()
+            {
+                try
+                {
+                    final Compiler compiler = new Compiler(asmContents.getText());
+                    preContents.setText(compiler.getPreProcessed());
+                    Object[][] data = compiler.getConstantsData();
+                    System.out.println(data);
+                    constantsTable.setModel(new DefaultTableModel(data, new String[]{"Name", "Type", "Value (Hex)", "Value (dec)"}));
+                    constantsTable.repaint();
 
-
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
+                    compiler.doWork(100);
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     private void createUIComponents()
@@ -432,6 +445,7 @@ public class MainGui
         panel2.setLayout(new GridBagLayout());
         tabPane.addTab("Pre-processed", panel2);
         final JScrollPane scrollPane1 = new JScrollPane();
+        scrollPane1.setVerticalScrollBarPolicy(22);
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
@@ -445,9 +459,10 @@ public class MainGui
         scrollPane1.setViewportView(preContents);
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridBagLayout());
-        tabPane.addTab("Untitled", panel3);
+        tabPane.addTab("Symbols", panel3);
         panel3.setBorder(BorderFactory.createTitledBorder("Symbols"));
         final JScrollPane scrollPane2 = new JScrollPane();
+        scrollPane2.setVerticalScrollBarPolicy(22);
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
@@ -455,8 +470,9 @@ public class MainGui
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(scrollPane2, gbc);
-        symbolsTable = new JTable();
-        scrollPane2.setViewportView(symbolsTable);
+        constantsTable = new JTable();
+        constantsTable.setAutoCreateRowSorter(true);
+        scrollPane2.setViewportView(constantsTable);
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 0;

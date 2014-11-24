@@ -29,52 +29,34 @@
  *
  */
 
-package net.dries007.j8051.preprocessor;
-
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+package net.dries007.j8051.compiler.exceptions;
 
 /**
- * Warning: Regex madness ahead.
  * @author Dries007
  */
-public class Macro
+public class PreprocessorException extends CompileException
 {
-    private String name;
-    private String[] args;
-    private String text;
-    private Pattern pattern;
-
-    public Macro(Matcher matcher)
+    public PreprocessorException()
     {
-        name = matcher.group(1);
-        args = matcher.group(2) != null ? matcher.group(2).split(", ?") : null;
-        text = matcher.group(3);
-        if (args != null)
-        {
-            StringBuilder patternBuilder = new StringBuilder();
-            patternBuilder.append(name).append("\\(");
-            for (int i = 0; i < args.length; i++)
-            {
-                patternBuilder.append("([^,]+?)");
-                if (i != args.length - 1) patternBuilder.append(", ?");
-            }
-            patternBuilder.append("\\)");
-            System.out.println(patternBuilder.toString());
-            pattern = Pattern.compile(patternBuilder.toString());
-        }
     }
 
-    public String acton(String line)
+    public PreprocessorException(String message)
     {
-        if (args == null) return line.replace(name, text);
-        Matcher matcher = pattern.matcher(line);
-        if (!matcher.find()) return line;
-        String replacement = text;
-        for (int i = 0; i < args.length; i++)
-        {
-            replacement = replacement.replace(args[i], matcher.group(i + 1));
-        }
-        return matcher.replaceFirst(replacement);
+        super(message);
+    }
+
+    public PreprocessorException(String message, Throwable cause)
+    {
+        super(message, cause);
+    }
+
+    public PreprocessorException(Throwable cause)
+    {
+        super(cause);
+    }
+
+    public PreprocessorException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
+    {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 }
