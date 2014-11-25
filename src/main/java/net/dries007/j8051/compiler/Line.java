@@ -31,47 +31,33 @@
 
 package net.dries007.j8051.compiler;
 
+import static net.dries007.j8051.util.Constants.PREFIX_COMMENT;
+
 /**
  * @author Dries007
  */
-public class Node
+public class Line
 {
-    private String stringData;
-    private int[] byteData;
-    private Instruction instruction;
+    public final String file;
+    public final int    line;
+    public final String src;
 
-    public int[] getBytes()
+    public String  code;
+    public boolean done;
+
+    public Line(String file, int line, String src)
     {
-        return byteData;
+        this.file = file;
+        this.line = line;
+        this.src = src;
+        int comment = src.indexOf(PREFIX_COMMENT);
+        this.code = (comment == -1 ? src : src.substring(0, comment)).replaceAll("^\\s+|\\s+$", "").replaceAll("\\s+", " ");
+        this.done = code.isEmpty();
     }
 
-    public int getByteSize()
+    @Override
+    public String toString()
     {
-        return instruction.size;
-    }
-
-    public String getStringData()
-    {
-        return stringData;
-    }
-
-    public void setStringData(String stringData)
-    {
-        this.stringData = stringData;
-    }
-
-    public int[] getByteData()
-    {
-        return byteData;
-    }
-
-    public void setByteData(int[] byteData)
-    {
-        this.byteData = byteData;
-    }
-
-    public boolean isDone()
-    {
-        return byteData != null;
+        return code;
     }
 }

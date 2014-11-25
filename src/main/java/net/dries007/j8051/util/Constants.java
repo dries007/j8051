@@ -49,22 +49,27 @@ public class Constants
     /*
      * Strings
      */
-    public static final String SETTINGS_FILENAME = "./j8051.properties";
-    public static final String SETTINGS_COMMENT  = "Settings file for j8051";
-    public static final String SRC_FILE          = "srcFile";
-    public static final String WINDOW_H          = "window.h";
-    public static final String WINDOW_W          = "window.w";
-    public static final String WINDOW_X          = "window.x";
-    public static final String WINDOW_Y          = "window.y";
-    public static final String AUTO_LOAD         = "auto.load";
-    public static final String AUTO_COMPILE      = "auto.compile";
-    public static final String AUTO_SAVE         = "auto.save";
-    public static final String ENCODING          = "encoding";
-    public static final String FONT_NAME         = "font.name";
-    public static final String FONT_STYLE        = "font.style";
-    public static final String FONT_SIZE         = "font.size";
-    public static final String TABSIZE           = "tabSize";
-    public static final String INCLUDEDIR        = "includedir";
+    public static final String SETTINGS_FILENAME  = "./j8051.properties";
+    public static final String SETTINGS_COMMENT   = "Settings file for j8051";
+    public static final String SRC_FILE           = "srcFile";
+    public static final String WINDOW_H           = "window.h";
+    public static final String WINDOW_W           = "window.w";
+    public static final String WINDOW_X           = "window.x";
+    public static final String WINDOW_Y           = "window.y";
+    public static final String AUTO_LOAD          = "auto.load";
+    public static final String AUTO_COMPILE       = "auto.compile";
+    public static final String AUTO_SAVE          = "auto.save";
+    public static final String ENCODING           = "encoding";
+    public static final String FONT_NAME          = "font.name";
+    public static final String FONT_STYLE         = "font.style";
+    public static final String FONT_SIZE          = "font.size";
+    public static final String TABSIZE            = "tabSize";
+    public static final String INCLUDEDIR         = "includedir";
+    /*
+     * Prefixes
+     */
+    public static final char   PREFIX_PRECOMPILER = '#';
+    public static final char   PREFIX_COMMENT     = ';';
 
     /*
      * Regex
@@ -77,9 +82,9 @@ public class Constants
     public static final Pattern IFNDEF    = Pattern.compile("^#ifndef[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
     public static final Pattern ELSE      = Pattern.compile("^#else[\\s]*$", Pattern.CASE_INSENSITIVE);
     public static final Pattern ENDIF     = Pattern.compile("^#endif[\\s]*$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern EQU       = Pattern.compile("^(\\S+)+\\s*equ\\s*(.+)+$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern DATA      = Pattern.compile("^(\\S+)+\\s*data\\s*(.+)+$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern BIT       = Pattern.compile("^(\\S+)+\\s*bit\\s*(.+)+$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern EQU       = Pattern.compile("(\\S+)+ equ (.+)+", Pattern.CASE_INSENSITIVE);
+    public static final Pattern DATA      = Pattern.compile("(\\S+)+ data (.+)+", Pattern.CASE_INSENSITIVE);
+    public static final Pattern BIT       = Pattern.compile("(\\S+)+ bit (.+)+", Pattern.CASE_INSENSITIVE);
 
     // Properties used for persistent stuff like preferences
     public static final Properties PROPERTIES = new Properties();

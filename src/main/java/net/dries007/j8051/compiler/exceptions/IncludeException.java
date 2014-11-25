@@ -34,28 +34,28 @@ package net.dries007.j8051.compiler.exceptions;
 /**
  * @author Dries007
  */
-public class CompileException extends Exception
+public class IncludeException extends PreprocessorException
 {
-    public CompileException()
+    public IncludeException()
     {
     }
 
-    public CompileException(String message)
+    public IncludeException(String message)
     {
         super(message);
     }
 
-    public CompileException(String message, Throwable cause)
+    public IncludeException(String message, Throwable cause)
     {
         super(message, cause);
     }
 
-    public CompileException(Throwable cause)
+    public IncludeException(Throwable cause)
     {
         super(cause);
     }
 
-    public CompileException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
+    public IncludeException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
     {
         super(message, cause, enableSuppression, writableStackTrace);
     }

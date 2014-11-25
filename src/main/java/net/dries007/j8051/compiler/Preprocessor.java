@@ -33,150 +33,135 @@ package net.dries007.j8051.compiler;
 
 import net.dries007.j8051.Main;
 import net.dries007.j8051.compiler.exceptions.CompileException;
+import net.dries007.j8051.compiler.exceptions.IncludeException;
 import net.dries007.j8051.compiler.exceptions.PreprocessorException;
-import net.dries007.j8051.util.Constants;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.ListIterator;
 import java.util.regex.Matcher;
 
-import static net.dries007.j8051.util.Constants.ENCODING;
-import static net.dries007.j8051.util.Constants.PROPERTIES;
+import static net.dries007.j8051.util.Constants.*;
 
 /**
  * Warning: Regex madness ahead.
+ *
  * @author Dries007
  */
 public class Preprocessor
 {
-    public static final char         PREFIX = '#';
 
     private Preprocessor()
     {
     }
 
-    static String process(String text, LinkedList<Node> nodes) throws CompileException
+    public static HashMap<String, Macro> process(LinkedList<Line> lines) throws CompileException
     {
         HashMap<String, Macro> symbols = new HashMap<>();
-        StringBuilder stringBuilder = new StringBuilder(text.length());
         LinkedList<Boolean> ifList = new LinkedList<>();
-        ArrayList<String> list = new ArrayList<>(Arrays.asList(text.split("[\r\n]+")));
-        boolean lastBlanck = false;
-        for (int i = 0; i < list.size(); i++)
+
+        ListIterator<Line> i = lines.listIterator();
+        while (i.hasNext())
         {
-            String line = list.get(i).trim();
-            line = line.replaceFirst(";.*", "");
-            if (line.length() == 0)
+            Line line = i.next();
+            if (line.done) continue;
+            if (line.code.charAt(0) == PREFIX_PRECOMPILER) // Initial check is fast
             {
-                if (!lastBlanck)
-                {
-                    stringBuilder.append('\n');
-                    lastBlanck = true;
-                }
-                continue;
-            }
-            lastBlanck = false;
-            if (line.charAt(0) == PREFIX)
-            {
-                Matcher matcher = Constants.INCLUDE_A.matcher(line);
+                Matcher matcher = INCLUDE_A.matcher(line.code);
                 if (matcher.matches())
                 {
-                    list.remove(i);
-                    try
-                    {
-                        //noinspection unchecked
-                        list.addAll(i, FileUtils.readLines(new File(matcher.group(1)), PROPERTIES.getProperty(ENCODING, "Cp1252")));
-                    }
-                    catch (IOException e)
-                    {
-                        throw new CompileException(e);
-                    }
+                    line.done = true;
+                    include(i, new File(matcher.group(1)));
                     continue;
                 }
-                matcher = Constants.INCLUDE_R.matcher(line);
+                matcher = INCLUDE_R.matcher(line.code);
                 if (matcher.matches())
                 {
-                    list.remove(i);
-                    try
-                    {
-                        //noinspection unchecked
-                        list.addAll(i, FileUtils.readLines(new File(Main.includeFile, matcher.group(1)), PROPERTIES.getProperty(ENCODING, "Cp1252")));
-                    }
-                    catch (IOException e)
-                    {
-                        throw new CompileException(e);
-                    }
+                    line.done = true;
+                    include(i, new File(Main.includeFile, matcher.group(1)));
                     continue;
                 }
-                matcher = Constants.DEFINE.matcher(line);
+                matcher = DEFINE.matcher(line.code);
                 if (matcher.matches())
                 {
+                    line.done = true;
                     if (symbols.containsKey(matcher.group(1))) throw new PreprocessorException(matcher.group(1) + " already defined.");
-                    symbols.put(matcher.group(1), new Macro(matcher));
+                    symbols.put(matcher.group(1), new Macro(matcher, i));
                     continue;
                 }
-                matcher = Constants.UNDEFINE.matcher(line);
+                matcher = UNDEFINE.matcher(line.code);
                 if (matcher.matches())
                 {
+                    line.done = true;
                     symbols.remove(matcher.group(1));
                     continue;
                 }
-                matcher = Constants.IFDEF.matcher(line);
+                matcher = IFDEF.matcher(line.code);
                 if (matcher.matches())
                 {
+                    line.done = true;
                     ifList.add(symbols.containsKey(matcher.group(1)));
-                    System.out.println(ifList.getLast());
                     continue;
                 }
-                matcher = Constants.IFNDEF.matcher(line);
+                matcher = IFNDEF.matcher(line.code);
                 if (matcher.matches())
                 {
+                    line.done = true;
                     ifList.add(!symbols.containsKey(matcher.group(1)));
-                    System.out.println(ifList.getLast());
                     continue;
                 }
-                matcher = Constants.ELSE.matcher(line);
+                matcher = ELSE.matcher(line.code);
                 if (matcher.matches())
                 {
+                    line.done = true;
                     ifList.add(!ifList.removeLast());
-                    System.out.println(ifList.getLast());
                     continue;
                 }
-                matcher = Constants.ENDIF.matcher(line);
+                matcher = ENDIF.matcher(line.code);
                 if (matcher.matches())
                 {
+                    line.done = true;
                     ifList.removeLast();
                     continue;
                 }
             }
-            else
+            boolean changes;
+            do
             {
-                if (ifList.isEmpty() || ifList.getLast())
+                changes = false;
+                for (String key : symbols.keySet())
                 {
-                    boolean changes;
-                    do
+                    if (line.code.contains(key))
                     {
-                        changes = false;
-                        for (String key : symbols.keySet())
-                        {
-                            if (line.contains(key))
-                            {
-                                String oldLine = line;
-                                line = symbols.get(key).acton(line);
-                                if (!oldLine.equals(line)) changes = true;
-                            }
-                        }
-                    } while (changes);
-                    nodes.add(new UnresolvedNode(line));
-                    stringBuilder.append(line).append('\n');
+                        String oldLine = line.code;
+                        line.code = symbols.get(key).acton(line.code);
+                        if (!oldLine.equals(line.code)) changes = true;
+                    }
                 }
+            } while (changes);
+            line.done = !(ifList.isEmpty() || ifList.getLast());
+        }
+        return symbols;
+    }
+
+    private static void include(ListIterator<Line> i, File file) throws IncludeException
+    {
+        try
+        {
+            String fileName = file.getName();
+            int lineCounter = 0;
+            for (Object src : FileUtils.readLines(file, PROPERTIES.getProperty(ENCODING, "Cp1252")))
+            {
+                Line line = new Line(fileName, lineCounter++, (String) src);
+                if (!line.done) i.add(line);
             }
         }
-        return stringBuilder.toString();
+        catch (IOException e)
+        {
+            throw new IncludeException(e);
+        }
     }
 }

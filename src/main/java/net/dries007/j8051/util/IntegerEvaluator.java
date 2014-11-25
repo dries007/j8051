@@ -31,12 +31,17 @@
 
 package net.dries007.j8051.util;
 
-import com.fathzer.soft.javaluator.*;
+import com.fathzer.soft.javaluator.AbstractEvaluator;
+import com.fathzer.soft.javaluator.Function;
+import com.fathzer.soft.javaluator.Operator;
+import com.fathzer.soft.javaluator.Parameters;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+
+import static com.fathzer.soft.javaluator.BracketPair.PARENTHESES;
 
 /**
  * <a href="http://en.wikipedia.org/wiki/Order_of_operations">Following the C preference</a>
@@ -73,7 +78,10 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
     public static final Operator NEGATE      = new Operator("-", 1, Operator.Associativity.RIGHT, 11);
     public static final Operator COMPLEMENT  = new Operator("~", 1, Operator.Associativity.RIGHT, 11);
 
-    public static final List<Operator> OPERATORS = Arrays.asList(LOGICAL_OR, LOGICAL_AND, BITWISE_OR, BITWISE_XOR, BITWISE_AND, EQUAL, NOT_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, SHIFT_LEFT, SHIFT_RIGHT, MINUS, PLUS, MULTIPLY, DIVIDE, MODULO, LOGICAL_NOT, NEGATE, COMPLEMENT);
+    // Used for bit assignments
+    public static final Operator DOT  = new Operator(".", 2, Operator.Associativity.LEFT, 12);
+
+    public static final List<Operator> OPERATORS = Arrays.asList(LOGICAL_OR, LOGICAL_AND, BITWISE_OR, BITWISE_XOR, BITWISE_AND, EQUAL, NOT_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, SHIFT_LEFT, SHIFT_RIGHT, MINUS, PLUS, MULTIPLY, DIVIDE, MODULO, LOGICAL_NOT, NEGATE, COMPLEMENT, DOT);
 
     public static final Function LOW  = new Function("low", 1);
     public static final Function HIGH = new Function("high", 1);
@@ -88,8 +96,8 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
         PARAMETERS = new Parameters();
         PARAMETERS.addFunctions(FUNCTIONS);
         PARAMETERS.addOperators(OPERATORS);
-        PARAMETERS.addFunctionBracket(BracketPair.PARENTHESES);
-        PARAMETERS.addExpressionBracket(BracketPair.PARENTHESES);
+        PARAMETERS.addFunctionBracket(PARENTHESES);
+        PARAMETERS.addExpressionBracket(PARENTHESES);
     }
 
     public static final IntegerEvaluator EVALUATOR = new IntegerEvaluator();
@@ -97,25 +105,6 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
     public IntegerEvaluator()
     {
         super(PARAMETERS);
-    }
-
-    @Override
-    protected Integer toValue(String literal, Object evaluationContext)
-    {
-        if (evaluationContext != null)
-        {
-            HashMap<String, Integer> map = (HashMap<String, Integer>) evaluationContext;
-            if (map.containsKey(literal)) return map.get(literal);
-        }
-        return Helper.parseToInt(literal);
-    }
-
-    @Override
-    protected Integer evaluate(Function function, Iterator<Integer> arguments, Object evaluationContext)
-    {
-        if (LOW == function) return arguments.next() & 0xFF;
-        if (HIGH == function) return arguments.next() >> 8;
-        return super.evaluate(function, arguments, evaluationContext);
     }
 
     @Override
@@ -143,7 +132,42 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
         if (LOGICAL_NOT == operator) return operands.next() == 0 ? 1 : 0;
         if (NEGATE == operator) return -operands.next();
         if (COMPLEMENT == operator) return ~operands.next();
+        if (DOT == operator)
+        {
+            Integer regiser = operands.next();
+            Integer bit = operands.next();
+            if (regiser >= 0x20 && regiser < 0x30)
+            {
+                regiser -= 0x20;
+                return (regiser / 2) + regiser % 2 == 0 ? bit : 8 + bit;
+            }
+            if (regiser >= 0x80 && regiser < 0xFF && regiser % 8 == 0)
+            {
+                return regiser + regiser - 0x80 % 16 == 0 ? bit : 8 + bit;
+            }
+            throw new NumberFormatException("Not bit addressable: " + regiser);
+        }
 
         return super.evaluate(operator, operands, evaluationContext);
+    }
+
+    @Override
+    protected Integer evaluate(Function function, Iterator<Integer> arguments, Object evaluationContext)
+    {
+        if (LOW == function) return arguments.next() & 0xFF;
+        if (HIGH == function) return arguments.next() >> 8;
+        return super.evaluate(function, arguments, evaluationContext);
+    }
+
+    @Override
+    protected Integer toValue(String literal, Object evaluationContext)
+    {
+        if (evaluationContext != null)
+        {
+            //noinspection unchecked
+            HashMap<String, Integer> map = (HashMap<String, Integer>) evaluationContext;
+            if (map.containsKey(literal)) return map.get(literal);
+        }
+        return Helper.parseToInt(literal);
     }
 }

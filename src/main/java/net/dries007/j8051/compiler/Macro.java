@@ -31,25 +31,35 @@
 
 package net.dries007.j8051.compiler;
 
+import java.util.ListIterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Warning: Regex madness ahead.
+ *
  * @author Dries007
  */
 public class Macro
 {
-    private String name;
+    private String   name;
     private String[] args;
-    private String text;
-    private Pattern pattern;
+    private String   text;
+    private Pattern  pattern;
 
-    public Macro(Matcher matcher)
+    public Macro(Matcher matcher, ListIterator<Line> iterator)
     {
         name = matcher.group(1);
         args = matcher.group(2) != null ? matcher.group(2).split(", ?") : null;
         text = matcher.group(3);
+        while (text.charAt(text.length() - 1) == '\\')
+        {
+            Line line = iterator.next();
+            if (line.done) continue;
+            line.done = true;
+
+            text = text.substring(0, text.length() - 1) + " " + line.code;
+        }
         if (args != null)
         {
             StringBuilder patternBuilder = new StringBuilder();

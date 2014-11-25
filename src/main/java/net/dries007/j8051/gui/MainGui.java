@@ -72,12 +72,14 @@ public class MainGui
     private       JPanel            root;
     private       JMenuBar          menuBar;
     private       RSyntaxTextArea   asmContents;
-    private JTextArea         preContents;
-    private JTable            constantsTable;
-    private JCheckBoxMenuItem autoLoad;
-    private JCheckBoxMenuItem autoSave;
-    private JCheckBoxMenuItem autoCompile;
-    private JMenuItem         includeFolder;
+    private       JTextArea         preText;
+    private       JTable            constantsTable;
+    private       JTextArea         constantsText;
+    private       JCheckBoxMenuItem autoLoad;
+    private       JCheckBoxMenuItem autoSave;
+    private       JCheckBoxMenuItem autoCompile;
+    private       JMenuItem         includeFolder;
+    private int compilerId = 0;
 
     private MainGui()
     {
@@ -94,8 +96,11 @@ public class MainGui
         asmContents.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
         asmContents.setFont(fontChooser.getSelectedFont());
 
-        preContents.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
-        preContents.setFont(fontChooser.getSelectedFont());
+        preText.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
+        preText.setFont(fontChooser.getSelectedFont());
+
+        constantsText.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
+        constantsText.setFont(fontChooser.getSelectedFont());
 
         // Main gui init
 
@@ -290,28 +295,27 @@ public class MainGui
 
     public void compile()
     {
-        EventQueue.invokeLater(new Runnable()
+        new Thread(new Runnable()
         {
             @Override
             public void run()
             {
                 try
                 {
-                    final Compiler compiler = new Compiler(asmContents.getText());
-                    preContents.setText(compiler.getPreProcessed());
-                    Object[][] data = compiler.getConstantsData();
-                    System.out.println(data);
-                    constantsTable.setModel(new DefaultTableModel(data, new String[]{"Name", "Type", "Value (Hex)", "Value (dec)"}));
-                    constantsTable.repaint();
+                    System.gc();
 
-                    compiler.doWork(100);
+                    final Compiler compiler = new Compiler(asmContents.getText());
+                    constantsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)"}));
+                    constantsTable.repaint();
+                    preText.setText(compiler.getAfterPrecompile());
+                    constantsText.setText(compiler.getAfterConstants());
                 }
                 catch (Exception e)
                 {
                     e.printStackTrace();
                 }
             }
-        });
+        }, "Compiler-" + compilerId++).start();
     }
 
     private void createUIComponents()
@@ -453,14 +457,13 @@ public class MainGui
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         panel2.add(scrollPane1, gbc);
-        preContents = new JTextArea();
-        preContents.setEditable(false);
-        preContents.setEnabled(true);
-        scrollPane1.setViewportView(preContents);
+        preText = new JTextArea();
+        preText.setEditable(false);
+        preText.setEnabled(true);
+        scrollPane1.setViewportView(preText);
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridBagLayout());
-        tabPane.addTab("Symbols", panel3);
-        panel3.setBorder(BorderFactory.createTitledBorder("Symbols"));
+        tabPane.addTab("Constants", panel3);
         final JScrollPane scrollPane2 = new JScrollPane();
         scrollPane2.setVerticalScrollBarPolicy(22);
         gbc = new GridBagConstraints();
@@ -470,9 +473,26 @@ public class MainGui
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(scrollPane2, gbc);
+        constantsText = new JTextArea();
+        constantsText.setEditable(false);
+        constantsText.setEnabled(true);
+        scrollPane2.setViewportView(constantsText);
+        final JPanel panel4 = new JPanel();
+        panel4.setLayout(new GridBagLayout());
+        tabPane.addTab("Symbols", panel4);
+        panel4.setBorder(BorderFactory.createTitledBorder("Symbols"));
+        final JScrollPane scrollPane3 = new JScrollPane();
+        scrollPane3.setVerticalScrollBarPolicy(22);
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        panel4.add(scrollPane3, gbc);
         constantsTable = new JTable();
         constantsTable.setAutoCreateRowSorter(true);
-        scrollPane2.setViewportView(constantsTable);
+        scrollPane3.setViewportView(constantsTable);
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 0;

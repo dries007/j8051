@@ -31,70 +31,119 @@
 
 package net.dries007.j8051.compiler;
 
+import net.dries007.j8051.Main;
+import net.dries007.j8051.compiler.exceptions.CompileException;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.ListIterator;
 
 /**
- * Doesn't do anything on instantiation
- *
  * @author Dries007
  */
 public class Compiler
 {
-    public static final int SRC = 0;            // Nothing done
-    public static final int PRE = 1;            // Preprocessor done
-    public static final int INSTRUCTIONS = 2;   // Instructions done
-    public static final int CONSTANTS = 3;      // Constants done
+    public static final int                       SRC          = 0; // Nothing done
+    public static final int                       PRE          = 1; // Preprocessor done
+    public static final int                       INSTRUCTIONS = 2; // Instructions done
+    public static final int                       CONSTANTS    = 3; // Constants done
 
-    public enum DataType
-    {
-        EQU, DATA, BIT, LABLEL
-    }
-    private HashMap<String, Integer>  dataValueMap     = new HashMap<>();
-    private HashMap<String, DataType> dataTypeMap = new HashMap<>();
+    private             HashMap<String, Integer>  dataValueMap = new HashMap<>();
+    private             HashMap<String, DataType> dataTypeMap  = new HashMap<>();
 
-    private int              status = SRC;
-    private LinkedList<Node> nodes  = new LinkedList<>();
-
-    private final String src;
-    private       String preProcessed;
+    private int    status       = SRC;
+    private int    lastStringLength;
+    private String afterPrecompile, afterInstructions, afterConstants;
+    private LinkedList<Line> lines = new LinkedList<>();
 
     public Compiler(String src)
     {
-        this.src = src;
+        lastStringLength = src.length();
+        String file = Main.srcFile.getName();
+        String[] split = src.split("[\\r\\n]+");
+        for (int i = 0; i < split.length; i++)
+        {
+            Line line = new Line(file, i, split[i]);
+            if (!line.done) lines.add(line);
+        }
+        System.out.printf("SRC: %d\n", lines.size());
     }
 
-    public String getPreProcessed()
+    public Object[][] getSymbols()
     {
-        doWork(PRE);
-        return preProcessed;
-    }
-
-    public Object[][] getConstantsData()
-    {
-        doWork(CONSTANTS);
-        Object[] keys = dataTypeMap.keySet().toArray();
-        Object[][] data = new Object[keys.length][4];
+        ArrayList<Object[]> data = new ArrayList<>(dataTypeMap.size());
+        String[] keys = dataTypeMap.keySet().toArray(new String[dataTypeMap.size()]);
         for (int i = 0; i < keys.length; i++)
         {
-            data[i] = new Object[]{keys[i], dataTypeMap.get(keys[i]).name(), Integer.toHexString(dataValueMap.get(keys[i])), Integer.toString(dataValueMap.get(keys[i]))};
+            data.add(new Object[]{keys[i], dataTypeMap.get(keys[i]).name(), Integer.toHexString(dataValueMap.get(keys[i])), Integer.toString(dataValueMap.get(keys[i]))});
         }
-        return data;
+        return data.toArray(new Object[data.size()][]);
     }
 
-    public void doWork(int target)
+    public void doWork(int target) throws CompileException
     {
         if (status >= target) return;
         if (status < PRE)
         {
-            preProcessed = Preprocessor.process(src, nodes);
+            Preprocessor.process(lines);
+            System.out.printf("PRE: %d\n", lines.size());
+            afterPrecompile = makeString();
             status = PRE;
+        }
+        if (status >= target) return;
+        if (status < INSTRUCTIONS)
+        {
+            Instruction.process(lines);
+            System.out.printf("INSTRUCTIONS: %d\n", lines.size());
+            afterInstructions = makeString();
+            status = INSTRUCTIONS;
         }
         if (status >= target) return;
         if (status < CONSTANTS)
         {
-            ConstantsDirectives.resolveConstants(nodes, dataValueMap, dataTypeMap);
+            Directives.resolveConstants(lines, dataValueMap, dataTypeMap);
+            System.out.printf("CONSTANTS: %d\n", lines.size());
+            afterConstants = makeString();
             status = CONSTANTS;
         }
+    }
+
+    public String getAfterPrecompile() throws CompileException
+    {
+        doWork(PRE);
+        return afterPrecompile;
+    }
+
+    public String getAfterInstructions() throws CompileException
+    {
+        doWork(INSTRUCTIONS);
+        return afterInstructions;
+    }
+
+    public String getAfterConstants() throws CompileException
+    {
+        doWork(CONSTANTS);
+        return afterConstants;
+    }
+
+    private String makeString()
+    {
+        StringBuilder stringBuilder = new StringBuilder(lastStringLength);
+        stringBuilder.append("  | File                 | Line  | Code\n");
+        stringBuilder.append("--+----------------------+-------+------------------------------------------\n");
+        ListIterator<Line> i = lines.listIterator();
+        while (i.hasNext())
+        {
+            Line line = i.next();
+            stringBuilder.append(String.format("%c | %-20s | %5d | %s", line.done ? 'Y' : 'N', line.file, line.line, line.code)).append('\n');
+        }
+        lastStringLength = stringBuilder.length();
+        return stringBuilder.toString();
+    }
+
+    public enum DataType
+    {
+        EQU, DATA, BIT, LABLEL
     }
 }

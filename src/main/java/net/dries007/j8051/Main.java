@@ -31,14 +31,11 @@
 package net.dries007.j8051;
 
 import net.dries007.j8051.gui.MainGui;
-import net.dries007.j8051.util.Constants;
 
 import javax.swing.*;
 import java.io.File;
 
-import static net.dries007.j8051.util.Constants.INCLUDEDIR;
-import static net.dries007.j8051.util.Constants.PROPERTIES;
-import static net.dries007.j8051.util.Constants.SRC_FILE;
+import static net.dries007.j8051.util.Constants.*;
 
 /**
  * @author Dries007
