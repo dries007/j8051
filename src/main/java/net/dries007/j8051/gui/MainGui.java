@@ -305,10 +305,10 @@ public class MainGui
                     System.gc();
 
                     final Compiler compiler = new Compiler(asmContents.getText());
-                    constantsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)"}));
-                    constantsTable.repaint();
                     preText.setText(compiler.getAfterPrecompile());
                     constantsText.setText(compiler.getAfterConstants());
+                    constantsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Definition", "Value (Hex)", "Value (dec)"}));
+                    constantsTable.repaint();
                 }
                 catch (Exception e)
                 {

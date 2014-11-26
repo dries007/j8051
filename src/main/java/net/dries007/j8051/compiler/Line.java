@@ -42,8 +42,8 @@ public class Line
     public final int    line;
     public final String src;
 
-    public String  code;
-    public boolean done;
+    public String code;
+    public boolean           done;
 
     public Line(String file, int line, String src)
     {
@@ -58,6 +58,6 @@ public class Line
     @Override
     public String toString()
     {
-        return code;
+        return "{Line #" + line + " File: " + file + " Done: " + done + " Code: " + code + "}";
     }
 }

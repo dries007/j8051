@@ -68,23 +68,23 @@ public class Preprocessor
         {
             Line line = i.next();
             if (line.done) continue;
-            if (line.code.charAt(0) == PREFIX_PRECOMPILER) // Initial check is fast
+            if (line.src.charAt(0) == PREFIX_PRECOMPILER) // Initial check is fast
             {
-                Matcher matcher = INCLUDE_A.matcher(line.code);
+                Matcher matcher = INCLUDE_A.matcher(line.src);
                 if (matcher.matches())
                 {
                     line.done = true;
                     include(i, new File(matcher.group(1)));
                     continue;
                 }
-                matcher = INCLUDE_R.matcher(line.code);
+                matcher = INCLUDE_R.matcher(line.src);
                 if (matcher.matches())
                 {
                     line.done = true;
                     include(i, new File(Main.includeFile, matcher.group(1)));
                     continue;
                 }
-                matcher = DEFINE.matcher(line.code);
+                matcher = DEFINE.matcher(line.src);
                 if (matcher.matches())
                 {
                     line.done = true;
@@ -92,35 +92,35 @@ public class Preprocessor
                     symbols.put(matcher.group(1), new Macro(matcher, i));
                     continue;
                 }
-                matcher = UNDEFINE.matcher(line.code);
+                matcher = UNDEFINE.matcher(line.src);
                 if (matcher.matches())
                 {
                     line.done = true;
                     symbols.remove(matcher.group(1));
                     continue;
                 }
-                matcher = IFDEF.matcher(line.code);
+                matcher = IFDEF.matcher(line.src);
                 if (matcher.matches())
                 {
                     line.done = true;
                     ifList.add(symbols.containsKey(matcher.group(1)));
                     continue;
                 }
-                matcher = IFNDEF.matcher(line.code);
+                matcher = IFNDEF.matcher(line.src);
                 if (matcher.matches())
                 {
                     line.done = true;
                     ifList.add(!symbols.containsKey(matcher.group(1)));
                     continue;
                 }
-                matcher = ELSE.matcher(line.code);
+                matcher = ELSE.matcher(line.src);
                 if (matcher.matches())
                 {
                     line.done = true;
                     ifList.add(!ifList.removeLast());
                     continue;
                 }
-                matcher = ENDIF.matcher(line.code);
+                matcher = ENDIF.matcher(line.src);
                 if (matcher.matches())
                 {
                     line.done = true;
@@ -136,7 +136,7 @@ public class Preprocessor
                 {
                     if (line.code.contains(key))
                     {
-                        String oldLine = line.code;
+                        String oldLine = line.src;
                         line.code = symbols.get(key).acton(line.code);
                         if (!oldLine.equals(line.code)) changes = true;
                     }

@@ -31,40 +31,84 @@
 
 package net.dries007.j8051.compiler;
 
-import net.dries007.j8051.compiler.exceptions.CompileException;
+import net.dries007.j8051.util.Constants;
+import net.dries007.j8051.util.Helper;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static net.dries007.j8051.util.IntegerEvaluator.EVALUATOR;
+import static net.dries007.j8051.util.IntegerEvaluator.EVALUATOR_BITS;
 
 /**
  * @author Dries007
  */
-public class Directives
+public class Symbol
 {
-    private Directives()
+    private final String  key;
+    private final Type    type;
+    private Integer       intValue;
+    private String        stringValue;
+
+    public Symbol(Type type, Matcher matcher)
     {
+        this.key = matcher.group(1);
+        this.type = type;
+        if (type != Type.LABEL)
+        {
+            stringValue = matcher.group(2);
+            try
+            {
+                intValue = Helper.parseToInt(stringValue);
+            }
+            catch (NumberFormatException ignored)
+            {
+                // This parsing is done to avoid using the IntegerEvaluator later.
+            }
+        }
     }
 
-    static void findConstants(LinkedList<Line> lines, HashMap<String, Symbol> constants) throws CompileException
+    public void resolve(HashMap<String, Symbol> symbolList)
     {
-        for (Line line : lines)
+        intValue = (type == Type.BIT ? EVALUATOR_BITS : EVALUATOR).evaluate(stringValue, symbolList);
+    }
+
+    public String getKey()
+    {
+        return key;
+    }
+
+    public Integer getIntValue()
+    {
+        return intValue;
+    }
+
+    public String getStringValue()
+    {
+        return stringValue;
+    }
+
+    public Type getType()
+    {
+        return type;
+    }
+
+    public boolean isDefined()
+    {
+        return intValue != null;
+    }
+
+    public static enum Type
+    {
+        // Label must be first
+        LABEL(Constants.LABEL), EQU(Constants.EQU), DATA(Constants.DATA), BIT(Constants.BIT);
+
+        public final Pattern pattern;
+
+        Type(Pattern pattern)
         {
-            if (line.done) continue;
-            String code = line.code;
-            for (Symbol.Type type : Symbol.Type.values())
-            {
-                Matcher matcher = type.pattern.matcher(code);
-                while (matcher.find())
-                {
-                    if (constants.containsKey(matcher.group(1))) throw new CompileException("Constant defined more then once: " + line);
-                    constants.put(matcher.group(1), new Symbol(type, matcher));
-                    code = matcher.replaceFirst("").trim();
-                    line.done = code.isEmpty();
-                    if (line.done) break;
-                }
-                if (line.done) break;
-            }
+            this.pattern = pattern;
         }
     }
 }

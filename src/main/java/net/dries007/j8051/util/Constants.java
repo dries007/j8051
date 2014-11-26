@@ -74,17 +74,23 @@ public class Constants
     /*
      * Regex
      */
-    public static final Pattern INCLUDE_A = Pattern.compile("^#include[\\s]+\"(.*)\"$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern INCLUDE_R = Pattern.compile("^#include[\\s]+<(.*)>$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern DEFINE    = Pattern.compile("^#define[\\s]+(\\w+?)(?:\\((.*)\\))? (.*)$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern UNDEFINE  = Pattern.compile("^#undefine[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern IFDEF     = Pattern.compile("^#ifdef[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern IFNDEF    = Pattern.compile("^#ifndef[\\s]+(\\w+?)$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern ELSE      = Pattern.compile("^#else[\\s]*$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern ENDIF     = Pattern.compile("^#endif[\\s]*$", Pattern.CASE_INSENSITIVE);
-    public static final Pattern EQU       = Pattern.compile("(\\S+)+ equ (.+)+", Pattern.CASE_INSENSITIVE);
-    public static final Pattern DATA      = Pattern.compile("(\\S+)+ data (.+)+", Pattern.CASE_INSENSITIVE);
-    public static final Pattern BIT       = Pattern.compile("(\\S+)+ bit (.+)+", Pattern.CASE_INSENSITIVE);
+    public static final Pattern INCLUDE_A = Pattern.compile("^#include \"(.*)\"$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern INCLUDE_R = Pattern.compile("^#include <(.*)>$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern DEFINE    = Pattern.compile("^#define (\\w+?)(?:\\((.*)\\))? (.*)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern UNDEFINE  = Pattern.compile("^#undefine (\\w+?)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern IFDEF     = Pattern.compile("^#ifdef (\\w+?)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern IFNDEF    = Pattern.compile("^#ifndef (\\w+?)$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern ELSE      = Pattern.compile("^#else  ?$", Pattern.CASE_INSENSITIVE);
+    public static final Pattern ENDIF     = Pattern.compile("^#endif  ?$", Pattern.CASE_INSENSITIVE);
+
+//    public static final Pattern CHAR_INVALID = Pattern.compile("'.{2,}'");
+//    public static final Pattern STRING = Pattern.compile("\"(.*)\"");
+//    public static final Pattern CHAR = Pattern.compile("'(.)'");
+
+    public static final Pattern EQU   = Pattern.compile("(\\w+) equ (.+)", Pattern.CASE_INSENSITIVE);
+    public static final Pattern DATA  = Pattern.compile("(\\w+) data (.+)", Pattern.CASE_INSENSITIVE);
+    public static final Pattern BIT   = Pattern.compile("(\\w+) bit (.+)", Pattern.CASE_INSENSITIVE);
+    public static final Pattern LABEL = Pattern.compile("(\\w+):", Pattern.CASE_INSENSITIVE);
 
     // Properties used for persistent stuff like preferences
     public static final Properties PROPERTIES = new Properties();

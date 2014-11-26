@@ -35,6 +35,7 @@ import com.fathzer.soft.javaluator.AbstractEvaluator;
 import com.fathzer.soft.javaluator.Function;
 import com.fathzer.soft.javaluator.Operator;
 import com.fathzer.soft.javaluator.Parameters;
+import net.dries007.j8051.compiler.Symbol;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -81,7 +82,7 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
     // Used for bit assignments
     public static final Operator DOT  = new Operator(".", 2, Operator.Associativity.LEFT, 12);
 
-    public static final List<Operator> OPERATORS = Arrays.asList(LOGICAL_OR, LOGICAL_AND, BITWISE_OR, BITWISE_XOR, BITWISE_AND, EQUAL, NOT_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, SHIFT_LEFT, SHIFT_RIGHT, MINUS, PLUS, MULTIPLY, DIVIDE, MODULO, LOGICAL_NOT, NEGATE, COMPLEMENT, DOT);
+    public static final List<Operator> OPERATORS = Arrays.asList(LOGICAL_OR, LOGICAL_AND, BITWISE_OR, BITWISE_XOR, BITWISE_AND, EQUAL, NOT_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, SHIFT_LEFT, SHIFT_RIGHT, MINUS, PLUS, MULTIPLY, DIVIDE, MODULO, LOGICAL_NOT, NEGATE, COMPLEMENT);
 
     public static final Function LOW  = new Function("low", 1);
     public static final Function HIGH = new Function("high", 1);
@@ -89,6 +90,7 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
     public static final List<Function> FUNCTIONS = Arrays.asList(LOW, HIGH);
 
     private static final Parameters PARAMETERS;
+    private static final Parameters PARAMETERS_BITS;
 
     static
     {
@@ -98,13 +100,21 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
         PARAMETERS.addOperators(OPERATORS);
         PARAMETERS.addFunctionBracket(PARENTHESES);
         PARAMETERS.addExpressionBracket(PARENTHESES);
+
+        PARAMETERS_BITS = new Parameters();
+        PARAMETERS_BITS.addFunctions(FUNCTIONS);
+        PARAMETERS_BITS.addOperators(OPERATORS);
+        PARAMETERS_BITS.add(DOT);
+        PARAMETERS_BITS.addFunctionBracket(PARENTHESES);
+        PARAMETERS_BITS.addExpressionBracket(PARENTHESES);
     }
 
-    public static final IntegerEvaluator EVALUATOR = new IntegerEvaluator();
+    public static final IntegerEvaluator EVALUATOR = new IntegerEvaluator(false);
+    public static final IntegerEvaluator EVALUATOR_BITS = new IntegerEvaluator(true);
 
-    public IntegerEvaluator()
+    public IntegerEvaluator(boolean bits)
     {
-        super(PARAMETERS);
+        super(bits ? PARAMETERS_BITS : PARAMETERS);
     }
 
     @Override
@@ -165,8 +175,13 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
         if (evaluationContext != null)
         {
             //noinspection unchecked
-            HashMap<String, Integer> map = (HashMap<String, Integer>) evaluationContext;
-            if (map.containsKey(literal)) return map.get(literal);
+            HashMap<String, Symbol> map = (HashMap<String, Symbol>) evaluationContext;
+            if (map.containsKey(literal))
+            {
+                Symbol symbol = map.get(literal);
+                if (symbol.isDefined()) return map.get(literal).getIntValue();
+                else throw new NumberFormatException(symbol.getKey() + " is still undefined.");
+            }
         }
         return Helper.parseToInt(literal);
     }

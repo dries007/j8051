@@ -34,6 +34,7 @@ package net.dries007.j8051.compiler;
 import net.dries007.j8051.Main;
 import net.dries007.j8051.compiler.exceptions.CompileException;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -46,22 +47,21 @@ public class Compiler
 {
     public static final int                       SRC          = 0; // Nothing done
     public static final int                       PRE          = 1; // Preprocessor done
-    public static final int                       INSTRUCTIONS = 2; // Instructions done
-    public static final int                       CONSTANTS    = 3; // Constants done
+    public static final int                       CONSTANTS    = 2; // Constants found
+    public static final int                       INSTRUCTIONS = 3; // Instructions found
+    public static final int                       LOCATIONS    = 4; // Memory locations mapped
 
-    private             HashMap<String, Integer>  dataValueMap = new HashMap<>();
-    private             HashMap<String, DataType> dataTypeMap  = new HashMap<>();
+    private final LinkedList<Line> lines = new LinkedList<>();
+    private final HashMap<String, Symbol> Symbols = new HashMap<>();
 
-    private int    status       = SRC;
-    private int    lastStringLength;
+    private int status = SRC;
     private String afterPrecompile, afterInstructions, afterConstants;
-    private LinkedList<Line> lines = new LinkedList<>();
 
     public Compiler(String src)
     {
-        lastStringLength = src.length();
-        String file = Main.srcFile.getName();
         String[] split = src.split("[\\r\\n]+");
+
+        String file = Main.srcFile.getName();
         for (int i = 0; i < split.length; i++)
         {
             Line line = new Line(file, i, split[i]);
@@ -70,26 +70,24 @@ public class Compiler
         System.out.printf("SRC: %d\n", lines.size());
     }
 
-    public Object[][] getSymbols()
-    {
-        ArrayList<Object[]> data = new ArrayList<>(dataTypeMap.size());
-        String[] keys = dataTypeMap.keySet().toArray(new String[dataTypeMap.size()]);
-        for (int i = 0; i < keys.length; i++)
-        {
-            data.add(new Object[]{keys[i], dataTypeMap.get(keys[i]).name(), Integer.toHexString(dataValueMap.get(keys[i])), Integer.toString(dataValueMap.get(keys[i]))});
-        }
-        return data.toArray(new Object[data.size()][]);
-    }
-
     public void doWork(int target) throws CompileException
     {
         if (status >= target) return;
         if (status < PRE)
         {
+            LinkedList<Line> lines = new LinkedList<>();
             Preprocessor.process(lines);
             System.out.printf("PRE: %d\n", lines.size());
             afterPrecompile = makeString();
             status = PRE;
+        }
+        if (status >= target) return;
+        if (status < CONSTANTS)
+        {
+            Directives.findConstants(lines, Symbols);
+            System.out.printf("CONSTANTS: %d\n", lines.size());
+            afterConstants = makeString();
+            status = CONSTANTS;
         }
         if (status >= target) return;
         if (status < INSTRUCTIONS)
@@ -99,14 +97,7 @@ public class Compiler
             afterInstructions = makeString();
             status = INSTRUCTIONS;
         }
-        if (status >= target) return;
-        if (status < CONSTANTS)
-        {
-            Directives.resolveConstants(lines, dataValueMap, dataTypeMap);
-            System.out.printf("CONSTANTS: %d\n", lines.size());
-            afterConstants = makeString();
-            status = CONSTANTS;
-        }
+
     }
 
     public String getAfterPrecompile() throws CompileException
@@ -115,21 +106,32 @@ public class Compiler
         return afterPrecompile;
     }
 
-    public String getAfterInstructions() throws CompileException
-    {
-        doWork(INSTRUCTIONS);
-        return afterInstructions;
-    }
-
     public String getAfterConstants() throws CompileException
     {
         doWork(CONSTANTS);
         return afterConstants;
     }
 
+    public Object[][] getSymbols() throws CompileException
+    {
+        doWork(CONSTANTS);
+        ArrayList<Object[]> data = new ArrayList<>(Symbols.size());
+        for (Symbol symbol : Symbols.values())
+        {
+            data.add(new Object[]{symbol.getKey(), symbol.getType(), symbol.getStringValue(), symbol.isDefined() ? Integer.toHexString(symbol.getIntValue()) : "_UNDEFINED_", symbol.isDefined() ? symbol.getIntValue() : "_UNDEFINED_"});
+        }
+        return data.toArray(new Object[data.size()][]);
+    }
+
+    public String getAfterInstructions() throws CompileException
+    {
+        doWork(INSTRUCTIONS);
+        return afterInstructions;
+    }
+
     private String makeString()
     {
-        StringBuilder stringBuilder = new StringBuilder(lastStringLength);
+        StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("  | File                 | Line  | Code\n");
         stringBuilder.append("--+----------------------+-------+------------------------------------------\n");
         ListIterator<Line> i = lines.listIterator();
@@ -138,7 +140,6 @@ public class Compiler
             Line line = i.next();
             stringBuilder.append(String.format("%c | %-20s | %5d | %s", line.done ? 'Y' : 'N', line.file, line.line, line.code)).append('\n');
         }
-        lastStringLength = stringBuilder.length();
         return stringBuilder.toString();
     }
 
