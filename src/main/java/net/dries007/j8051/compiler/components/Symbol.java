@@ -129,7 +129,7 @@ public class Symbol implements Component
     @Override
     public String toString()
     {
-        return "SYMBOL: \t" + key + '\t' + type + (intValue == null ? null : "\t0x" + Integer.toHexString(intValue));
+        return "SYMBOL: \t" + key + " \t " + type  + " \t " + (intValue == null ? null : "0x" + Integer.toHexString(intValue));
     }
 
     public static enum Type

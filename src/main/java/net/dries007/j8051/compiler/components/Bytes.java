@@ -94,6 +94,6 @@ public class Bytes implements Component
     @Override
     public String toString()
     {
-        return "BYTES: \t" + type + '\t' + Arrays.toString(strings);
+        return "BYTES: \t" + type + " \t " + Arrays.toString(strings);
     }
 }

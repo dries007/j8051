@@ -50,7 +50,7 @@ public class Compiler
     public final String preprocessed, symbolsFound, firstResolve;
 
     public final LinkedList<Component> components = new LinkedList<>();
-    public final HashMap<String, Symbol> symbols = new HashMap<>();
+    public final HashMap<String, Symbol> symbols  = new HashMap<>();
 
     public Compiler(String src) throws PreprocessorException
     {
@@ -60,7 +60,7 @@ public class Compiler
         symbolsFound = stringify(true);
         Bytes.findBytes(components);
         //noinspection StatementWithEmptyBody
-        while (Symbol.resolveSymbols(components, symbols));
+        while (Symbol.resolveSymbols(components, symbols)) ;
         firstResolve = stringify(true);
     }
 
