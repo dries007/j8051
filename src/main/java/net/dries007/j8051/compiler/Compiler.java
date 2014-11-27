@@ -31,10 +31,7 @@
 
 package net.dries007.j8051.compiler;
 
-import net.dries007.j8051.compiler.components.Bytes;
-import net.dries007.j8051.compiler.components.Component;
-import net.dries007.j8051.compiler.components.Symbol;
-import net.dries007.j8051.compiler.components.UnsolvedComponent;
+import net.dries007.j8051.compiler.components.*;
 import net.dries007.j8051.compiler.exceptions.CompileException;
 import net.dries007.j8051.compiler.exceptions.PreprocessorException;
 
@@ -47,31 +44,31 @@ import java.util.LinkedList;
  */
 public class Compiler
 {
-    public final String preprocessed, symbolsFound, firstResolve;
+    public final String preprocessed;
 
-    public final LinkedList<Component> components = new LinkedList<>();
-    public final HashMap<String, Symbol> symbols  = new HashMap<>();
+    public final LinkedList<Component>   components = new LinkedList<>();
+    public final HashMap<String, Symbol> symbols    = new HashMap<>();
 
     public Compiler(String src) throws PreprocessorException
     {
-        components.add(new UnsolvedComponent(Preprocessor.process(src)));
-        preprocessed = stringify(false);
+        preprocessed = Preprocessor.process(src);
+        components.add(new UnsolvedComponent(0, preprocessed));
         Symbol.findSymbols(components, symbols);
-        symbolsFound = stringify(true);
         Bytes.findBytes(components);
+        InstructionComponent.findInstructions(components);
         //noinspection StatementWithEmptyBody
         while (Symbol.resolveSymbols(components, symbols)) ;
-        firstResolve = stringify(true);
+        InstructionComponent.resolveInstructions(components, symbols);
     }
 
-    private String stringify(boolean changeNewlines)
+    public Object[][] getComponents()
     {
-        StringBuilder stringBuilder = new StringBuilder();
+        ArrayList<Object[]> data = new ArrayList<>(components.size());
         for (Component component : components)
         {
-            stringBuilder.append(changeNewlines ? component.toString().replaceAll("[\\r\\n]+", " ") : component).append('\n');
+            data.add(component.getData());
         }
-        return stringBuilder.toString();
+        return data.toArray(new Object[data.size()][]);
     }
 
     public Object[][] getSymbols() throws CompileException

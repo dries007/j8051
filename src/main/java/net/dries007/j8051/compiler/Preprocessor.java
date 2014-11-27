@@ -206,7 +206,7 @@ public class Preprocessor
         private String   name;
         private String[] args;
         private String   text;
-        private Pattern pattern;
+        private Pattern  pattern;
 
         public Macro(Matcher matcher, ListIterator<String> iterator)
         {

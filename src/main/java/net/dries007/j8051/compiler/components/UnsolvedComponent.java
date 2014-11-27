@@ -34,18 +34,36 @@ package net.dries007.j8051.compiler.components;
 /**
  * @author Dries007
  */
-public class UnsolvedComponent implements Component
+public class UnsolvedComponent extends Component
 {
     public final String contents;
 
-    public UnsolvedComponent(String contents)
+    public UnsolvedComponent(int startOffset, String contents)
     {
-        this.contents = contents;
+        super(startOffset, startOffset + contents.length());
+        this.contents = contents.trim();
     }
 
     @Override
     public String toString()
     {
-        return "UNSOLVED: "  + contents;
+        return "UNSOLVED: " + contents;
+    }
+
+    public boolean shouldAdd()
+    {
+        return getSrcEnd() != getSrcStart();
+    }
+
+    @Override
+    protected Object getContents()
+    {
+        return contents;
+    }
+
+    @Override
+    protected Object getSubType()
+    {
+        return "";
     }
 }

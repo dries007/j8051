@@ -70,37 +70,9 @@
               </scrollpane>
             </children>
           </grid>
-          <grid id="71eb9" layout-manager="GridBagLayout">
-            <constraints>
-              <tabbedpane title="Constants"/>
-            </constraints>
-            <properties/>
-            <border type="none"/>
-            <children>
-              <scrollpane id="36189">
-                <constraints>
-                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
-                  <gridbag weightx="1.0" weighty="1.0"/>
-                </constraints>
-                <properties>
-                  <verticalScrollBarPolicy value="22"/>
-                </properties>
-                <border type="none"/>
-                <children>
-                  <component id="c1f59" class="javax.swing.JTextArea" binding="constantsText">
-                    <constraints/>
-                    <properties>
-                      <editable value="false"/>
-                      <enabled value="true"/>
-                    </properties>
-                  </component>
-                </children>
-              </scrollpane>
-            </children>
-          </grid>
           <grid id="94d2e" layout-manager="GridBagLayout">
             <constraints>
-              <tabbedpane title="First pass"/>
+              <tabbedpane title="Components"/>
             </constraints>
             <properties/>
             <border type="none"/>
@@ -115,11 +87,10 @@
                 </properties>
                 <border type="none"/>
                 <children>
-                  <component id="a0ae9" class="javax.swing.JTextArea" binding="firstPass">
+                  <component id="49741" class="javax.swing.JTable" binding="componentsTable">
                     <constraints/>
                     <properties>
-                      <editable value="false"/>
-                      <enabled value="true"/>
+                      <autoCreateRowSorter value="false"/>
                     </properties>
                   </component>
                 </children>

@@ -31,39 +31,56 @@
 
 package net.dries007.j8051.compiler.components;
 
-import net.dries007.j8051.util.Constants;
+import net.dries007.j8051.compiler.Instruction;
 
-import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @author Dries007
  */
-public class Bytes extends Component
+public class InstructionComponent extends Component
 {
-    public final Type     type;
-    public final Object[] objects;
+    public final Instruction.Type type;
 
-    private Bytes(int startOffset, Matcher matcher, Type type)
+    private InstructionComponent(int startOffset, Matcher matcher, Instruction.Type type)
     {
         super(matcher.start() + startOffset, matcher.end() + startOffset);
         this.type = type;
-        if (type == Type.DS) this.objects = new String[]{matcher.group(1), matcher.group(2)};
-        else this.objects = matcher.group(1).split(",\\s*");
     }
 
     @Override
     public String toString()
     {
-        return "BYTES: \t" + type + " \t " + Arrays.toString(objects);
+        return "INSTRUCTION: \t" + type;
     }
 
-    public static void findBytes(List<Component> components)
+    @Override
+    protected Object getContents()
     {
-        for (Type type : Type.values())
+        return "";
+    }
+
+    @Override
+    protected Object getSubType()
+    {
+        return type;
+    }
+
+    public static void resolveInstructions(LinkedList<Component> components, HashMap<String, Symbol> symbols)
+    {
+        for (Instruction.Type type : Instruction.Type.values())
+        {
+
+        }
+    }
+
+    public static void findInstructions(List<Component> components)
+    {
+        for (Instruction.Type type : Instruction.Type.values())
         {
             ListIterator<Component> i = components.listIterator(components.size());
             while (i.hasPrevious())
@@ -80,37 +97,13 @@ public class Bytes extends Component
                     UnsolvedComponent pre = new UnsolvedComponent(component.getSrcStart(), src.substring(0, matcher.start()));
                     if (pre.shouldAdd()) i.add(pre);
 
-                    Bytes bytes = new Bytes(pre.getSrcEnd(), matcher, type);
-                    i.add(bytes);
+                    InstructionComponent instructionComponent = new InstructionComponent(pre.getSrcEnd(), matcher, type);
+                    i.add(instructionComponent);
 
-                    UnsolvedComponent post = new UnsolvedComponent(bytes.getSrcEnd(), src.substring(matcher.end()));
+                    UnsolvedComponent post = new UnsolvedComponent(instructionComponent.getSrcEnd(), src.substring(matcher.end()));
                     if (post.shouldAdd()) i.add(post);
                 }
             }
-        }
-    }
-
-    @Override
-    protected Object getContents()
-    {
-        return Arrays.toString(objects);
-    }
-
-    @Override
-    protected Object getSubType()
-    {
-        return type;
-    }
-
-    private static enum Type
-    {
-        DB(Constants.DB), DW(Constants.DW), DS(Constants.DS);
-
-        public final Pattern pattern;
-
-        Type(Pattern pattern)
-        {
-            this.pattern = pattern;
         }
     }
 }

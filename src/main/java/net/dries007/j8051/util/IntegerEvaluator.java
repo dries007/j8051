@@ -80,7 +80,7 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
     public static final Operator COMPLEMENT  = new Operator("~", 1, Operator.Associativity.RIGHT, 11);
 
     // Used for bit assignments
-    public static final Operator DOT  = new Operator(".", 2, Operator.Associativity.LEFT, 12);
+    public static final Operator DOT = new Operator(".", 2, Operator.Associativity.LEFT, 12);
 
     public static final List<Operator> OPERATORS = Arrays.asList(LOGICAL_OR, LOGICAL_AND, BITWISE_OR, BITWISE_XOR, BITWISE_AND, EQUAL, NOT_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, SHIFT_LEFT, SHIFT_RIGHT, MINUS, PLUS, MULTIPLY, DIVIDE, MODULO, LOGICAL_NOT, NEGATE, COMPLEMENT);
 
@@ -109,7 +109,7 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
         PARAMETERS_BITS.addExpressionBracket(PARENTHESES);
     }
 
-    public static final IntegerEvaluator EVALUATOR = new IntegerEvaluator(false);
+    public static final IntegerEvaluator EVALUATOR      = new IntegerEvaluator(false);
     public static final IntegerEvaluator EVALUATOR_BITS = new IntegerEvaluator(true);
 
     public IntegerEvaluator(boolean bits)

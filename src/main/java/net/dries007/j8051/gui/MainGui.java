@@ -39,6 +39,7 @@ import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
@@ -74,12 +75,11 @@ public class MainGui
     private       RSyntaxTextArea   asmContents;
     private       JTextArea         preText;
     private       JTable            constantsTable;
-    private       JTextArea         constantsText;
-    private JTextArea         firstPass;
-    private JCheckBoxMenuItem autoLoad;
-    private JCheckBoxMenuItem autoSave;
-    private JCheckBoxMenuItem autoCompile;
-    private JMenuItem         includeFolder;
+    private       JTable            componentsTable;
+    private       JCheckBoxMenuItem autoLoad;
+    private       JCheckBoxMenuItem autoSave;
+    private       JCheckBoxMenuItem autoCompile;
+    private       JMenuItem         includeFolder;
     private int compilerId = 0;
 
     private MainGui()
@@ -100,11 +100,37 @@ public class MainGui
         preText.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
         preText.setFont(fontChooser.getSelectedFont());
 
-        constantsText.setTabSize(10);
-        constantsText.setFont(fontChooser.getSelectedFont());
+        componentsTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer()
+        {
+            private final Color HIGHLIGHT_COLOR = Color.YELLOW;
 
-        firstPass.setTabSize(10);
-        firstPass.setFont(fontChooser.getSelectedFont());
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+            {
+                Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (value.equals("UnsolvedComponent"))
+                {
+                    if (isSelected)
+                    {
+                        comp.setBackground(new Color((HIGHLIGHT_COLOR.getRGB() ^ comp.getBackground().getRGB())));
+                        comp.setForeground(new Color(Color.BLACK.getRGB() ^ comp.getForeground().getRGB()));
+                    }
+                    else
+                    {
+                        comp.setBackground(HIGHLIGHT_COLOR);
+                        comp.setForeground(Color.BLACK);
+                    }
+                }
+                else
+                {
+                    if (!isSelected)
+                    {
+                        comp.setBackground(Color.WHITE);
+                        comp.setForeground(Color.BLACK);
+                    }
+                }
+                return comp;
+            }
+        });
 
         // Main gui init
 
@@ -310,10 +336,12 @@ public class MainGui
 
                     final Compiler compiler = new Compiler(asmContents.getText());
                     preText.setText(compiler.preprocessed);
+
                     constantsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)"}));
                     constantsTable.repaint();
-                    constantsText.setText(compiler.symbolsFound);
-                    firstPass.setText(compiler.firstResolve);
+
+                    componentsTable.setModel(new DefaultTableModel(compiler.getComponents(), new String[]{"Start", "End", "Type", "SubType", "Contents"}));
+                    componentsTable.repaint();
                 }
                 catch (Exception e)
                 {
@@ -468,7 +496,7 @@ public class MainGui
         scrollPane1.setViewportView(preText);
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridBagLayout());
-        tabPane.addTab("Constants", panel3);
+        tabPane.addTab("Components", panel3);
         final JScrollPane scrollPane2 = new JScrollPane();
         scrollPane2.setVerticalScrollBarPolicy(22);
         gbc = new GridBagConstraints();
@@ -478,13 +506,13 @@ public class MainGui
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         panel3.add(scrollPane2, gbc);
-        constantsText = new JTextArea();
-        constantsText.setEditable(false);
-        constantsText.setEnabled(true);
-        scrollPane2.setViewportView(constantsText);
+        componentsTable = new JTable();
+        componentsTable.setAutoCreateRowSorter(false);
+        scrollPane2.setViewportView(componentsTable);
         final JPanel panel4 = new JPanel();
         panel4.setLayout(new GridBagLayout());
-        tabPane.addTab("First pass", panel4);
+        tabPane.addTab("Symbols", panel4);
+        panel4.setBorder(BorderFactory.createTitledBorder("Symbols"));
         final JScrollPane scrollPane3 = new JScrollPane();
         scrollPane3.setVerticalScrollBarPolicy(22);
         gbc = new GridBagConstraints();
@@ -494,26 +522,9 @@ public class MainGui
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
         panel4.add(scrollPane3, gbc);
-        firstPass = new JTextArea();
-        firstPass.setEditable(false);
-        firstPass.setEnabled(true);
-        scrollPane3.setViewportView(firstPass);
-        final JPanel panel5 = new JPanel();
-        panel5.setLayout(new GridBagLayout());
-        tabPane.addTab("Symbols", panel5);
-        panel5.setBorder(BorderFactory.createTitledBorder("Symbols"));
-        final JScrollPane scrollPane4 = new JScrollPane();
-        scrollPane4.setVerticalScrollBarPolicy(22);
-        gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.weightx = 1.0;
-        gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.BOTH;
-        panel5.add(scrollPane4, gbc);
         constantsTable = new JTable();
         constantsTable.setAutoCreateRowSorter(true);
-        scrollPane4.setViewportView(constantsTable);
+        scrollPane3.setViewportView(constantsTable);
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 0;

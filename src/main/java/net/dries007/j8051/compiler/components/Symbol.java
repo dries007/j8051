@@ -43,16 +43,17 @@ import java.util.regex.Pattern;
 /**
  * @author Dries007
  */
-public class Symbol implements Component
+public class Symbol extends Component
 {
     public final String  key;
     public final Type    type;
-    public Integer       intValue;
+    public       Integer intValue;
 
-    public Symbol(Type type, String key)
+    private Symbol(int startOffset, Matcher matcher, Type type)
     {
-        this.key = key;
+        super(matcher.start() + startOffset, matcher.end() + startOffset);
         this.type = type;
+        this.key = matcher.groupCount() >= 1 ? matcher.group(1) : null;
     }
 
     public static void findSymbols(List<Component> components, Map<String, Symbol> symbols)
@@ -71,15 +72,15 @@ public class Symbol implements Component
                     if (!matcher.find()) continue;
                     i.remove();
 
-                    String pre = src.substring(0, matcher.start()).trim();
-                    if (!pre.isEmpty()) i.add(new UnsolvedComponent(pre));
+                    UnsolvedComponent pre = new UnsolvedComponent(component.getSrcStart(), src.substring(0, matcher.start()));
+                    if (pre.shouldAdd()) i.add(pre);
 
-                    Symbol symbol = new Symbol(type, matcher.group(1));
-                    symbols.put(matcher.group(1), symbol);
+                    Symbol symbol = new Symbol(pre.getSrcEnd(), matcher, type);
+                    if (symbol.key != null) symbols.put(matcher.group(1), symbol);
                     i.add(symbol);
 
-                    String post = src.substring(matcher.end()).trim();
-                    if (!post.isEmpty()) i.add(new UnsolvedComponent(post));
+                    UnsolvedComponent post = new UnsolvedComponent(symbol.getSrcEnd(), src.substring(matcher.end()));
+                    if (post.shouldAdd()) i.add(post);
                 }
             }
         }
@@ -108,6 +109,15 @@ public class Symbol implements Component
                     {
                         ((Symbol) prev).intValue = type.evaluator.evaluate(((UnsolvedComponent) current).contents.replaceAll("[\\r\\n]+", " "), symbols);
                         i.remove();
+                        if (((Symbol) prev).type.removeFromSrc())
+                        {
+                            i.previous();
+                            i.remove();
+                        }
+                        else
+                        {
+                            prev.setSrcEnd(current.getSrcEnd());
+                        }
                         resolvedAny = true;
                     }
                     catch (NumberFormatException ignored)
@@ -129,20 +139,44 @@ public class Symbol implements Component
     @Override
     public String toString()
     {
-        return "SYMBOL: \t" + key + " \t " + type  + " \t " + (intValue == null ? null : "0x" + Integer.toHexString(intValue));
+        return "SYMBOL: \t" + key + " \t " + type + " \t " + (intValue == null ? null : "0x" + Integer.toHexString(intValue));
     }
 
-    public static enum Type
+    @Override
+    protected Object getContents()
     {
-        LABEL(Constants.LABEL, null), EQU(Constants.EQU, IntegerEvaluator.EVALUATOR), DATA(Constants.DATA, IntegerEvaluator.EVALUATOR), BIT(Constants.BIT, IntegerEvaluator.EVALUATOR_BITS);
+        return key + ": \t" + (intValue == null ? null : "0x" + Integer.toHexString(intValue));
+    }
 
-        public final Pattern pattern;
-        public final IntegerEvaluator evaluator;
+    @Override
+    protected Object getSubType()
+    {
+        return type;
+    }
 
-        Type(Pattern pattern, IntegerEvaluator evaluator)
+    private static enum Type
+    {
+        LABEL(false, Constants.LABEL, null),
+        EQU(true, Constants.EQU, IntegerEvaluator.EVALUATOR),
+        DATA(true, Constants.DATA, IntegerEvaluator.EVALUATOR),
+        BIT(true, Constants.BIT, IntegerEvaluator.EVALUATOR_BITS),
+        ORG(false, Constants.ORG, IntegerEvaluator.EVALUATOR),
+        END(false, Constants.END, null);
+
+        public final  Pattern          pattern;
+        public final  IntegerEvaluator evaluator;
+        private final boolean          removeFromSrc;
+
+        private Type(boolean removeFromSrc, Pattern pattern, IntegerEvaluator evaluator)
         {
             this.pattern = pattern;
             this.evaluator = evaluator;
+            this.removeFromSrc = removeFromSrc;
+        }
+
+        public boolean removeFromSrc()
+        {
+            return removeFromSrc;
         }
     }
 }

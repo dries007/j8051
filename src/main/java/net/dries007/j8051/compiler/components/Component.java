@@ -34,6 +34,37 @@ package net.dries007.j8051.compiler.components;
 /**
  * @author Dries007
  */
-public interface Component
+public abstract class Component
 {
+    private int start, end;
+
+    protected Component(int start, int end)
+    {
+        this.start = start;
+        this.end = end;
+    }
+
+    public int getSrcStart()
+    {
+        return start;
+    }
+
+    public int getSrcEnd()
+    {
+        return end;
+    }
+
+    public Object[] getData()
+    {
+        return new Object[]{getSrcStart(), getSrcEnd(), this.getClass().getSimpleName(), getSubType(), getContents()};
+    }
+
+    protected abstract Object getContents();
+
+    protected abstract Object getSubType();
+
+    public void setSrcEnd(int end)
+    {
+        this.end = end;
+    }
 }
