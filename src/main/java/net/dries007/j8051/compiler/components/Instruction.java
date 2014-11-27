@@ -29,10 +29,9 @@
  *
  */
 
-package net.dries007.j8051.compiler;
+package net.dries007.j8051.compiler.components;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.regex.Pattern;
 
 /**
@@ -41,7 +40,7 @@ import java.util.regex.Pattern;
  *
  * @author Dries007
  */
-public class Instruction
+public class Instruction implements Component
 {
     public static final HashMap<Pattern, Instruction> SIMPLE_INSTRUCTIONS = new HashMap<>();
     public static final Instruction[]                 INSTRUCTIONS        = new Instruction[0x100];
@@ -224,10 +223,5 @@ public class Instruction
     Instruction(int opcode, String mnemonic)
     {
         this(opcode, mnemonic, 1);
-    }
-
-    public static void process(LinkedList<Line> lines)
-    {
-
     }
 }

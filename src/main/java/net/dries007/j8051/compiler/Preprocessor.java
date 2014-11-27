@@ -32,7 +32,6 @@
 package net.dries007.j8051.compiler;
 
 import net.dries007.j8051.Main;
-import net.dries007.j8051.compiler.exceptions.CompileException;
 import net.dries007.j8051.compiler.exceptions.IncludeException;
 import net.dries007.j8051.compiler.exceptions.PreprocessorException;
 import org.apache.commons.io.FileUtils;
@@ -43,6 +42,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.ListIterator;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static net.dries007.j8051.util.Constants.*;
 
@@ -53,77 +53,88 @@ import static net.dries007.j8051.util.Constants.*;
  */
 public class Preprocessor
 {
-
     private Preprocessor()
     {
     }
 
-    public static HashMap<String, Macro> process(LinkedList<Line> lines) throws CompileException
+    public static String process(String srcText) throws PreprocessorException
     {
+        Matcher matcher;
+        LinkedList<String> lines = new LinkedList<>();
+        for (String line : srcText.split("[\\r\\n]+"))
+        {
+            int comment = line.indexOf(PREFIX_COMMENT);
+            line = (comment == -1 ? line : line.substring(0, comment)).replaceAll("^\\s+|\\s+$", "");
+            if (!line.isEmpty()) lines.add(line);
+        }
+
         HashMap<String, Macro> symbols = new HashMap<>();
         LinkedList<Boolean> ifList = new LinkedList<>();
 
-        ListIterator<Line> i = lines.listIterator();
+        StringBuilder out = new StringBuilder(srcText.length());
+
+        ListIterator<String> i = lines.listIterator();
         while (i.hasNext())
         {
-            Line line = i.next();
-            if (line.done) continue;
-            if (line.src.charAt(0) == PREFIX_PRECOMPILER) // Initial check is fast
+            String src = i.next();
+            if (src.charAt(0) == PREFIX_PRECOMPILER) // Initial check is fast
             {
-                Matcher matcher = INCLUDE_A.matcher(line.src);
+                matcher = INCLUDE_A.matcher(src);
                 if (matcher.matches())
                 {
-                    line.done = true;
+                    i.remove();
                     include(i, new File(matcher.group(1)));
                     continue;
                 }
-                matcher = INCLUDE_R.matcher(line.src);
+                matcher = INCLUDE_R.matcher(src);
                 if (matcher.matches())
                 {
-                    line.done = true;
+                    i.remove();
                     include(i, new File(Main.includeFile, matcher.group(1)));
                     continue;
                 }
-                matcher = DEFINE.matcher(line.src);
+            }
+        }
+        i = lines.listIterator();
+        while (i.hasNext())
+        {
+            String src = i.next();
+            if (src.charAt(0) == PREFIX_PRECOMPILER) // Initial check is fast
+            {
+                matcher = DEFINE.matcher(src);
                 if (matcher.matches())
                 {
-                    line.done = true;
                     if (symbols.containsKey(matcher.group(1))) throw new PreprocessorException(matcher.group(1) + " already defined.");
                     symbols.put(matcher.group(1), new Macro(matcher, i));
                     continue;
                 }
-                matcher = UNDEFINE.matcher(line.src);
+                matcher = UNDEFINE.matcher(src);
                 if (matcher.matches())
                 {
-                    line.done = true;
                     symbols.remove(matcher.group(1));
                     continue;
                 }
-                matcher = IFDEF.matcher(line.src);
+                matcher = IFDEF.matcher(src);
                 if (matcher.matches())
                 {
-                    line.done = true;
                     ifList.add(symbols.containsKey(matcher.group(1)));
                     continue;
                 }
-                matcher = IFNDEF.matcher(line.src);
+                matcher = IFNDEF.matcher(src);
                 if (matcher.matches())
                 {
-                    line.done = true;
                     ifList.add(!symbols.containsKey(matcher.group(1)));
                     continue;
                 }
-                matcher = ELSE.matcher(line.src);
+                matcher = ELSE.matcher(src);
                 if (matcher.matches())
                 {
-                    line.done = true;
                     ifList.add(!ifList.removeLast());
                     continue;
                 }
-                matcher = ENDIF.matcher(line.src);
+                matcher = ENDIF.matcher(src);
                 if (matcher.matches())
                 {
-                    line.done = true;
                     ifList.removeLast();
                     continue;
                 }
@@ -134,34 +145,103 @@ public class Preprocessor
                 changes = false;
                 for (String key : symbols.keySet())
                 {
-                    if (line.code.contains(key))
+                    if (src.contains(key))
                     {
-                        String oldLine = line.src;
-                        line.code = symbols.get(key).acton(line.code);
-                        if (!oldLine.equals(line.code)) changes = true;
+                        String oldLine = src;
+                        src = symbols.get(key).acton(src);
+                        if (!oldLine.equals(src)) changes = true;
                     }
                 }
             } while (changes);
-            line.done = !(ifList.isEmpty() || ifList.getLast());
+            out.append(replaceAcsii(src)).append('\n');
         }
-        return symbols;
+        return out.toString();
     }
 
-    private static void include(ListIterator<Line> i, File file) throws IncludeException
+    private static String replaceAcsii(String src)
+    {
+        Matcher matcher;
+        while ((matcher = CHAR.matcher(src)).find())
+        {
+            src = matcher.replaceFirst(Integer.toHexString(Character.getNumericValue(matcher.group(1).charAt(0))) + "h");
+        }
+        while ((matcher = STRING.matcher(src)).find())
+        {
+            char[] chars = matcher.group(1).toCharArray();
+            StringBuilder stringBuilder = new StringBuilder();
+            for (int i = 0; i < chars.length; i++)
+            {
+                stringBuilder.append(Integer.toHexString((int) chars[i])).append('h');
+                if (i + 1 < chars.length) stringBuilder.append(", ");
+            }
+            src = matcher.replaceFirst(stringBuilder.toString());
+        }
+        return src;
+    }
+
+    private static void include(ListIterator<String> i, File file) throws IncludeException
     {
         try
         {
-            String fileName = file.getName();
-            int lineCounter = 0;
-            for (Object src : FileUtils.readLines(file, PROPERTIES.getProperty(ENCODING, "Cp1252")))
+            for (String line : FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, "Cp1252")).split("[\\r\\n]+"))
             {
-                Line line = new Line(fileName, lineCounter++, (String) src);
-                if (!line.done) i.add(line);
+                int comment = line.indexOf(PREFIX_COMMENT);
+                line = (comment == -1 ? line : line.substring(0, comment)).replaceAll("^\\s+|\\s+$", "");
+                if (!line.isEmpty()) i.add(line);
             }
         }
         catch (IOException e)
         {
             throw new IncludeException(e);
+        }
+    }
+
+    /**
+     * Warning: Regex madness ahead.
+     *
+     * @author Dries007
+     */
+    public static class Macro
+    {
+        private String   name;
+        private String[] args;
+        private String   text;
+        private Pattern pattern;
+
+        public Macro(Matcher matcher, ListIterator<String> iterator)
+        {
+            name = matcher.group(1);
+            args = matcher.group(2) != null ? matcher.group(2).split(", ?") : null;
+            text = matcher.group(3);
+            while (text.charAt(text.length() - 1) == '\\')
+            {
+                text = text.substring(0, text.length() - 1) + " " + iterator.next();
+            }
+            if (args != null)
+            {
+                StringBuilder patternBuilder = new StringBuilder();
+                patternBuilder.append(name).append("\\(");
+                for (int i = 0; i < args.length; i++)
+                {
+                    patternBuilder.append("([^,]+?)");
+                    if (i != args.length - 1) patternBuilder.append(", ?");
+                }
+                patternBuilder.append("\\)");
+                pattern = Pattern.compile(patternBuilder.toString());
+            }
+        }
+
+        public String acton(String line)
+        {
+            if (args == null) return line.replace(name, text);
+            Matcher matcher = pattern.matcher(line);
+            if (!matcher.find()) return line;
+            String replacement = text;
+            for (int i = 0; i < args.length; i++)
+            {
+                replacement = replacement.replace(args[i], matcher.group(i + 1));
+            }
+            return matcher.replaceFirst(replacement);
         }
     }
 }

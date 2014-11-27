@@ -83,14 +83,16 @@ public class Constants
     public static final Pattern ELSE      = Pattern.compile("^#else  ?$", Pattern.CASE_INSENSITIVE);
     public static final Pattern ENDIF     = Pattern.compile("^#endif  ?$", Pattern.CASE_INSENSITIVE);
 
-//    public static final Pattern CHAR_INVALID = Pattern.compile("'.{2,}'");
-//    public static final Pattern STRING = Pattern.compile("\"(.*)\"");
-//    public static final Pattern CHAR = Pattern.compile("'(.)'");
+    public static final Pattern STRING = Pattern.compile("\"(.*)\"");
+    public static final Pattern CHAR = Pattern.compile("'(.)'");
 
-    public static final Pattern EQU   = Pattern.compile("(\\w+) equ (.+)", Pattern.CASE_INSENSITIVE);
-    public static final Pattern DATA  = Pattern.compile("(\\w+) data (.+)", Pattern.CASE_INSENSITIVE);
-    public static final Pattern BIT   = Pattern.compile("(\\w+) bit (.+)", Pattern.CASE_INSENSITIVE);
-    public static final Pattern LABEL = Pattern.compile("(\\w+):", Pattern.CASE_INSENSITIVE);
+    public static final Pattern EQU   = Pattern.compile("(\\w+)\\s+equ\\s", Pattern.CASE_INSENSITIVE);
+    public static final Pattern DATA  = Pattern.compile("(\\w+)\\s+data\\s", Pattern.CASE_INSENSITIVE);
+    public static final Pattern BIT   = Pattern.compile("(\\w+)\\s+bit\\s", Pattern.CASE_INSENSITIVE);
+    public static final Pattern LABEL = Pattern.compile("(\\w+):");
+
+    public static final Pattern DB = Pattern.compile("db\\s+([\\da-f]+[hb]?(?:,\\s*(?:[\\da-f]+[hb]?))*)", Pattern.CASE_INSENSITIVE);
+    public static final Pattern DW = Pattern.compile("dw\\s+([\\da-f]+[hb]?(?:,\\s*(?:[\\da-f]+[hb]?))*)", Pattern.CASE_INSENSITIVE);
 
     // Properties used for persistent stuff like preferences
     public static final Properties PROPERTIES = new Properties();

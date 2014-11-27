@@ -29,35 +29,11 @@
  *
  */
 
-package net.dries007.j8051.compiler;
-
-import static net.dries007.j8051.util.Constants.PREFIX_COMMENT;
+package net.dries007.j8051.compiler.components;
 
 /**
  * @author Dries007
  */
-public class Line
+public interface Component
 {
-    public final String file;
-    public final int    line;
-    public final String src;
-
-    public String code;
-    public boolean           done;
-
-    public Line(String file, int line, String src)
-    {
-        this.file = file;
-        this.line = line;
-        this.src = src;
-        int comment = src.indexOf(PREFIX_COMMENT);
-        this.code = (comment == -1 ? src : src.substring(0, comment)).replaceAll("^\\s+|\\s+$", "").replaceAll("\\s+", " ");
-        this.done = code.isEmpty();
-    }
-
-    @Override
-    public String toString()
-    {
-        return "{Line #" + line + " File: " + file + " Done: " + done + " Code: " + code + "}";
-    }
 }

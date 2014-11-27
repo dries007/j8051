@@ -29,42 +29,23 @@
  *
  */
 
-package net.dries007.j8051.compiler;
-
-import net.dries007.j8051.compiler.exceptions.CompileException;
-
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.regex.Matcher;
+package net.dries007.j8051.compiler.components;
 
 /**
  * @author Dries007
  */
-public class Directives
+public class UnsolvedComponent implements Component
 {
-    private Directives()
+    public final String contents;
+
+    public UnsolvedComponent(String contents)
     {
+        this.contents = contents;
     }
 
-    static void findConstants(LinkedList<Line> lines, HashMap<String, Symbol> constants) throws CompileException
+    @Override
+    public String toString()
     {
-        for (Line line : lines)
-        {
-            if (line.done) continue;
-            String code = line.code;
-            for (Symbol.Type type : Symbol.Type.values())
-            {
-                Matcher matcher = type.pattern.matcher(code);
-                while (matcher.find())
-                {
-                    if (constants.containsKey(matcher.group(1))) throw new CompileException("Constant defined more then once: " + line);
-                    constants.put(matcher.group(1), new Symbol(type, matcher));
-                    code = matcher.replaceFirst("").trim();
-                    line.done = code.isEmpty();
-                    if (line.done) break;
-                }
-                if (line.done) break;
-            }
-        }
+        return "UNSOLVED: "  + contents;
     }
 }

@@ -35,7 +35,7 @@ import com.fathzer.soft.javaluator.AbstractEvaluator;
 import com.fathzer.soft.javaluator.Function;
 import com.fathzer.soft.javaluator.Operator;
 import com.fathzer.soft.javaluator.Parameters;
-import net.dries007.j8051.compiler.Symbol;
+import net.dries007.j8051.compiler.components.Symbol;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -179,8 +179,8 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
             if (map.containsKey(literal))
             {
                 Symbol symbol = map.get(literal);
-                if (symbol.isDefined()) return map.get(literal).getIntValue();
-                else throw new NumberFormatException(symbol.getKey() + " is still undefined.");
+                if (symbol.isDefined()) return map.get(literal).intValue;
+                else throw new NumberFormatException(symbol.key + " is still undefined.");
             }
         }
         return Helper.parseToInt(literal);

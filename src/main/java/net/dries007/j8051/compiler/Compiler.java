@@ -31,120 +31,56 @@
 
 package net.dries007.j8051.compiler;
 
-import net.dries007.j8051.Main;
+import net.dries007.j8051.compiler.components.Bytes;
+import net.dries007.j8051.compiler.components.Component;
+import net.dries007.j8051.compiler.components.Symbol;
+import net.dries007.j8051.compiler.components.UnsolvedComponent;
 import net.dries007.j8051.compiler.exceptions.CompileException;
+import net.dries007.j8051.compiler.exceptions.PreprocessorException;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.ListIterator;
 
 /**
  * @author Dries007
  */
 public class Compiler
 {
-    public static final int                       SRC          = 0; // Nothing done
-    public static final int                       PRE          = 1; // Preprocessor done
-    public static final int                       CONSTANTS    = 2; // Constants found
-    public static final int                       INSTRUCTIONS = 3; // Instructions found
-    public static final int                       LOCATIONS    = 4; // Memory locations mapped
+    public final String preprocessed, symbolsFound, firstResolve;
 
-    private final LinkedList<Line> lines = new LinkedList<>();
-    private final HashMap<String, Symbol> Symbols = new HashMap<>();
+    public final LinkedList<Component> components = new LinkedList<>();
+    public final HashMap<String, Symbol> symbols = new HashMap<>();
 
-    private int status = SRC;
-    private String afterPrecompile, afterInstructions, afterConstants;
-
-    public Compiler(String src)
+    public Compiler(String src) throws PreprocessorException
     {
-        String[] split = src.split("[\\r\\n]+");
-
-        String file = Main.srcFile.getName();
-        for (int i = 0; i < split.length; i++)
-        {
-            Line line = new Line(file, i, split[i]);
-            if (!line.done) lines.add(line);
-        }
-        System.out.printf("SRC: %d\n", lines.size());
+        components.add(new UnsolvedComponent(Preprocessor.process(src)));
+        preprocessed = stringify(false);
+        Symbol.findSymbols(components, symbols);
+        symbolsFound = stringify(true);
+        Bytes.findBytes(components);
+        //noinspection StatementWithEmptyBody
+        while (Symbol.resolveSymbols(components, symbols));
+        firstResolve = stringify(true);
     }
 
-    public void doWork(int target) throws CompileException
-    {
-        if (status >= target) return;
-        if (status < PRE)
-        {
-            LinkedList<Line> lines = new LinkedList<>();
-            Preprocessor.process(lines);
-            System.out.printf("PRE: %d\n", lines.size());
-            afterPrecompile = makeString();
-            status = PRE;
-        }
-        if (status >= target) return;
-        if (status < CONSTANTS)
-        {
-            Directives.findConstants(lines, Symbols);
-            System.out.printf("CONSTANTS: %d\n", lines.size());
-            afterConstants = makeString();
-            status = CONSTANTS;
-        }
-        if (status >= target) return;
-        if (status < INSTRUCTIONS)
-        {
-            Instruction.process(lines);
-            System.out.printf("INSTRUCTIONS: %d\n", lines.size());
-            afterInstructions = makeString();
-            status = INSTRUCTIONS;
-        }
-
-    }
-
-    public String getAfterPrecompile() throws CompileException
-    {
-        doWork(PRE);
-        return afterPrecompile;
-    }
-
-    public String getAfterConstants() throws CompileException
-    {
-        doWork(CONSTANTS);
-        return afterConstants;
-    }
-
-    public Object[][] getSymbols() throws CompileException
-    {
-        doWork(CONSTANTS);
-        ArrayList<Object[]> data = new ArrayList<>(Symbols.size());
-        for (Symbol symbol : Symbols.values())
-        {
-            data.add(new Object[]{symbol.getKey(), symbol.getType(), symbol.getStringValue(), symbol.isDefined() ? Integer.toHexString(symbol.getIntValue()) : "_UNDEFINED_", symbol.isDefined() ? symbol.getIntValue() : "_UNDEFINED_"});
-        }
-        return data.toArray(new Object[data.size()][]);
-    }
-
-    public String getAfterInstructions() throws CompileException
-    {
-        doWork(INSTRUCTIONS);
-        return afterInstructions;
-    }
-
-    private String makeString()
+    private String stringify(boolean changeNewlines)
     {
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("  | File                 | Line  | Code\n");
-        stringBuilder.append("--+----------------------+-------+------------------------------------------\n");
-        ListIterator<Line> i = lines.listIterator();
-        while (i.hasNext())
+        for (Component component : components)
         {
-            Line line = i.next();
-            stringBuilder.append(String.format("%c | %-20s | %5d | %s", line.done ? 'Y' : 'N', line.file, line.line, line.code)).append('\n');
+            stringBuilder.append(changeNewlines ? component.toString().replaceAll("[\\r\\n]+", " ") : component).append('\n');
         }
         return stringBuilder.toString();
     }
 
-    public enum DataType
+    public Object[][] getSymbols() throws CompileException
     {
-        EQU, DATA, BIT, LABLEL
+        ArrayList<Object[]> data = new ArrayList<>(symbols.size());
+        for (Symbol symbol : symbols.values())
+        {
+            data.add(new Object[]{symbol.key, symbol.type, symbol.isDefined() ? Integer.toHexString(symbol.intValue) : "_UNDEFINED_", symbol.isDefined() ? symbol.intValue : "_UNDEFINED_"});
+        }
+        return data.toArray(new Object[data.size()][]);
     }
 }

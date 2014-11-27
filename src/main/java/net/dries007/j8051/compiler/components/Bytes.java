@@ -29,86 +29,71 @@
  *
  */
 
-package net.dries007.j8051.compiler;
+package net.dries007.j8051.compiler.components;
 
 import net.dries007.j8051.util.Constants;
-import net.dries007.j8051.util.Helper;
 
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static net.dries007.j8051.util.IntegerEvaluator.EVALUATOR;
-import static net.dries007.j8051.util.IntegerEvaluator.EVALUATOR_BITS;
 
 /**
  * @author Dries007
  */
-public class Symbol
+public class Bytes implements Component
 {
-    private final String  key;
-    private final Type    type;
-    private Integer       intValue;
-    private String        stringValue;
-
-    public Symbol(Type type, Matcher matcher)
+    public final Type type;
+    public final String[] strings;
+    public Bytes(Type type, String string)
     {
-        this.key = matcher.group(1);
         this.type = type;
-        if (type != Type.LABEL)
+        this.strings = string.split(",\\s*");
+    }
+
+    public static void findBytes(List<Component> components)
+    {
+        for (Type type : Type.values())
         {
-            stringValue = matcher.group(2);
-            try
+            ListIterator<Component> i = components.listIterator(components.size());
+            while (i.hasPrevious())
             {
-                intValue = Helper.parseToInt(stringValue);
-            }
-            catch (NumberFormatException ignored)
-            {
-                // This parsing is done to avoid using the IntegerEvaluator later.
+                Component component = i.previous();
+                if (component instanceof UnsolvedComponent)
+                {
+                    String src = ((UnsolvedComponent) component).contents;
+
+                    Matcher matcher = type.pattern.matcher(src);
+                    if (!matcher.find()) continue;
+                    i.remove();
+
+                    String pre = src.substring(0, matcher.start()).trim();
+                    if (!pre.isEmpty()) i.add(new UnsolvedComponent(pre));
+
+                    i.add(new Bytes(type, matcher.group(1)));
+
+                    String post = src.substring(matcher.end()).trim();
+                    if (!post.isEmpty()) i.add(new UnsolvedComponent(post));
+                }
             }
         }
-    }
-
-    public void resolve(HashMap<String, Symbol> symbolList)
-    {
-        intValue = (type == Type.BIT ? EVALUATOR_BITS : EVALUATOR).evaluate(stringValue, symbolList);
-    }
-
-    public String getKey()
-    {
-        return key;
-    }
-
-    public Integer getIntValue()
-    {
-        return intValue;
-    }
-
-    public String getStringValue()
-    {
-        return stringValue;
-    }
-
-    public Type getType()
-    {
-        return type;
-    }
-
-    public boolean isDefined()
-    {
-        return intValue != null;
     }
 
     public static enum Type
     {
-        // Label must be first
-        LABEL(Constants.LABEL), EQU(Constants.EQU), DATA(Constants.DATA), BIT(Constants.BIT);
+        DB(Constants.DB), DW(Constants.DW);
 
         public final Pattern pattern;
-
         Type(Pattern pattern)
         {
             this.pattern = pattern;
         }
+    }
+
+    @Override
+    public String toString()
+    {
+        return "BYTES: \t" + type + '\t' + Arrays.toString(strings);
     }
 }
