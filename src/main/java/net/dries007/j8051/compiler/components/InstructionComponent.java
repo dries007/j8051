@@ -33,10 +33,7 @@ package net.dries007.j8051.compiler.components;
 
 import net.dries007.j8051.compiler.Instruction;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 import java.util.regex.Matcher;
 
 /**
@@ -45,23 +42,25 @@ import java.util.regex.Matcher;
 public class InstructionComponent extends Component
 {
     public final Instruction.Type type;
+    public Instruction instruction;
 
     private InstructionComponent(int startOffset, Matcher matcher, Instruction.Type type)
     {
         super(matcher.start() + startOffset, matcher.end() + startOffset);
         this.type = type;
+        if (Instruction.SIMPLE_INSTRUCTIONS.containsKey(type)) instruction = Instruction.SIMPLE_INSTRUCTIONS.get(type);
     }
 
     @Override
     public String toString()
     {
-        return "INSTRUCTION: \t" + type;
+        return "INSTRUCTION: \t" + (instruction == null ? type : instruction);
     }
 
     @Override
     protected Object getContents()
     {
-        return "";
+        return instruction;
     }
 
     @Override
@@ -72,10 +71,47 @@ public class InstructionComponent extends Component
 
     public static void resolveInstructions(LinkedList<Component> components, HashMap<String, Symbol> symbols)
     {
-        for (Instruction.Type type : Instruction.Type.values())
+        if (components.isEmpty()) return;
+        ListIterator<Component> i = components.listIterator();
+        Component prev = i.next();
+        while (i.hasNext())
         {
-
+            Component current = i.next();
+            if (prev instanceof InstructionComponent && current instanceof UnsolvedComponent)
+            {
+                InstructionComponent instructionComponent = (InstructionComponent) prev;
+                UnsolvedComponent unsolvedComponent = (UnsolvedComponent) current;
+                String[] arguments = unsolvedComponent.contents.split(",\\s*");
+                if (instructionComponent.instruction == null)
+                {
+                    List<Instruction> instructions = instructionComponent.type.getInstructions();
+                    for (Instruction instruction : instructions)
+                    {
+                        if (instructionComponent.matches(symbols, instruction, arguments))
+                        {
+                            i.remove();
+                            prev.setSrcEnd(current.getSrcEnd());
+                            System.out.println("INSTRUMENT ARG MATCH: " + Arrays.toString(arguments) + Arrays.toString(instruction.arguments));
+                            break;
+                        }
+                    }
+                }
+            }
+            prev = current;
         }
+    }
+
+    private boolean matches(HashMap<String, Symbol> symbols, Instruction instruction, String[] args)
+    {
+        if (instruction.arguments.length != args.length) return false;
+        for (int i = 0; i < args.length; i++)
+        {
+            Instruction.Argument argument = instruction.arguments[i];
+            if (argument.literal && argument.string.equalsIgnoreCase(args[i])) continue;
+            return false;
+        }
+        this.instruction = instruction;
+        return true;
     }
 
     public static void findInstructions(List<Component> components)

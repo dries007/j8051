@@ -89,44 +89,39 @@ public class Symbol extends Component
     public static boolean resolveSymbols(List<Component> components, Map<String, Symbol> symbols)
     {
         boolean resolvedAny = false;
-        for (Type type : Type.values())
+        ListIterator<Component> i = components.listIterator();
+        Component prev = null;
+        while (i.hasNext())
         {
-            if (type.evaluator == null) continue;
-
-            ListIterator<Component> i = components.listIterator();
-            Component prev = null;
-            while (i.hasNext())
+            if (prev == null)
             {
-                if (prev == null)
-                {
-                    prev = i.next();
-                    continue;
-                }
-                Component current = i.next();
-                if (prev instanceof Symbol && current instanceof UnsolvedComponent && !((Symbol) prev).isDefined())
-                {
-                    try
-                    {
-                        ((Symbol) prev).intValue = type.evaluator.evaluate(((UnsolvedComponent) current).contents.replaceAll("[\\r\\n]+", " "), symbols);
-                        i.remove();
-                        if (((Symbol) prev).type.removeFromSrc())
-                        {
-                            i.previous();
-                            i.remove();
-                        }
-                        else
-                        {
-                            prev.setSrcEnd(current.getSrcEnd());
-                        }
-                        resolvedAny = true;
-                    }
-                    catch (NumberFormatException ignored)
-                    {
-
-                    }
-                }
-                prev = current;
+                prev = i.next();
+                continue;
             }
+            Component current = i.next();
+            if (prev instanceof Symbol && current instanceof UnsolvedComponent && !((Symbol) prev).isDefined() && ((Symbol) prev).type.evaluator != null)
+            {
+                try
+                {
+                    ((Symbol) prev).intValue = ((Symbol) prev).type.evaluator.evaluate(((UnsolvedComponent) current).contents.replaceAll("[\\r\\n]+", " "), symbols);
+                    i.remove();
+                    if (((Symbol) prev).type.removeFromSrc())
+                    {
+                        i.previous();
+                        i.remove();
+                    }
+                    else
+                    {
+                        prev.setSrcEnd(current.getSrcEnd());
+                    }
+                    resolvedAny = true;
+                }
+                catch (NumberFormatException ignored)
+                {
+
+                }
+            }
+            prev = current;
         }
         return resolvedAny;
     }

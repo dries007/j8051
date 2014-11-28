@@ -31,7 +31,10 @@
 
 package net.dries007.j8051.compiler;
 
+import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
@@ -44,11 +47,14 @@ import static java.util.regex.Pattern.CASE_INSENSITIVE;
  */
 public class Instruction
 {
-    public static final Instruction[]              INSTRUCTIONS              = new Instruction[0x100];
-    public static final EnumMap<Type, Instruction> TYPE_INSTRUCTION_ENUM_MAP = new EnumMap<Type, Instruction>(Type.class);
+    public static final EnumMap<Type, Instruction>       SIMPLE_INSTRUCTIONS       = new EnumMap<Type, Instruction>(Type.class);
+    public static final EnumMap<Type, List<Instruction>> TYPE_INSTRUCTION_ENUM_MAP = new EnumMap<Type, List<Instruction>>(Type.class);
+    public static final Instruction[]                    INSTRUCTIONS              = new Instruction[0x100];
 
     static
     {
+        for (Type type : Type.values()) TYPE_INSTRUCTION_ENUM_MAP.put(type, new LinkedList<Instruction>());
+
         int opcode = 0;
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.NOP);                                                  //0x00
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.AJMP, Argument.ADDR11);                                //0x01
@@ -223,63 +229,71 @@ public class Instruction
         this.type = type;
         this.size = size;
         this.arguments = arguments;
-        TYPE_INSTRUCTION_ENUM_MAP.put(type, this);
+        TYPE_INSTRUCTION_ENUM_MAP.get(type).add(this);
+        if (arguments.length == 0) SIMPLE_INSTRUCTIONS.put(type, this);
     }
 
-    private static enum Argument
+    @Override
+    public String toString()
     {
-        ADDR11, ADDR16, DIRECT, REL, BIT, DATA, DATA16, A, AB, AT_R0, AT_R1, R0, R1, R2, R3, R4, R5, R6, R7, C, AT_DPTR, DPTR, SLASH_BIT, AT_A_PLUS_DPTR, AT_A_PLUS_PC;
+        return type + " " + Arrays.toString(arguments) + " Size:" + size;
+    }
+
+    public static enum Argument
+    {
+        ADDR11,
+        ADDR16,
+        DIRECT,
+        REL,
+        BIT,
+        DATA,
+        DATA16,
+        A(true, "A"),
+        AB(true, "AB"),
+        AT_R0(true, "@R0"),
+        AT_R1(true, "@R1"),
+        R0(true, "R0"),
+        R1(true, "R1"),
+        R2(true, "R2"),
+        R3(true, "R3"),
+        R4(true, "R4"),
+        R5(true, "R5"),
+        R6(true, "R6"),
+        R7(true, "R7"),
+        C(true, "C"),
+        AT_DPTR(true, "@DPTR"),
+        DPTR(true, "DPTR"),
+        SLASH_BIT,
+        AT_A_PLUS_DPTR(true, "@A+DPTR"),
+        AT_A_PLUS_PC(true, "@A+PC");
+
         static Argument[] R = {Argument.R0, Argument.R1, Argument.R2, Argument.R3, Argument.R4, Argument.R5, Argument.R6, Argument.R7};
+
+        public final boolean literal;
+        public final String string;
+
+        Argument(boolean literal, String string)
+        {
+            this.literal = literal;
+            this.string = string;
+        }
+
+        Argument()
+        {
+            literal = false;
+            string = null;
+        }
     }
 
     public static enum Type
     {
-        ACALL,
-        ADD,
-        ADDC,
-        AJMP,
-        ANL,
-        CJNE,
-        CLR,
-        CPL,
-        DA,
-        DEC,
-        DIV,
-        DJNZ,
-        INC,
-        JB,
-        JBC,
-        JC,
-        JMP,
-        JNB,
-        JNC,
-        JNZ,
-        JZ,
-        LCALL,
-        LJMP,
-        MOV,
-        MOVC,
-        MOVX,
-        MUL,
-        NOP,
-        ORL,
-        POP,
-        PUSH,
-        RET,
-        RETI,
-        RL,
-        RLC,
-        RR,
-        RRC,
-        SETB,
-        SJMP,
-        SUBB,
-        SWAP,
-        XCH,
-        XCHD,
-        XRL,
-        Undefined;
+        ACALL, ADD, ADDC, AJMP, ANL, CJNE, CLR, CPL, DA, DEC, DIV, DJNZ, INC, JB, JBC, JC, JMP, JNB, JNC, JNZ, JZ, LCALL, LJMP, MOV, MOVC, MOVX, MUL, NOP, ORL, POP, PUSH, RET, RETI, RL, RLC, RR, RRC, SETB, SJMP, SUBB, SWAP, XCH, XCHD, XRL, Undefined;
 
-        public Pattern pattern = Pattern.compile("\\s+" + this.name() + "\\s+", CASE_INSENSITIVE);
+        public Pattern pattern = Pattern.compile("(?:^|\\s+)" + this.name() + "(?:\\s+|$)", CASE_INSENSITIVE);
+
+        public List<Instruction> getInstructions()
+        {
+            return Instruction.TYPE_INSTRUCTION_ENUM_MAP.get(this);
+        }
     }
 }

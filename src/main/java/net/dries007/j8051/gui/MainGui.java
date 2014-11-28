@@ -100,6 +100,8 @@ public class MainGui
         preText.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
         preText.setFont(fontChooser.getSelectedFont());
 
+        // DEBUG todo
+
         componentsTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer()
         {
             private final Color HIGHLIGHT_COLOR = Color.YELLOW;
@@ -107,7 +109,7 @@ public class MainGui
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
             {
                 Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (value.equals("UnsolvedComponent"))
+                if (value != null && value.equals("UnsolvedComponent"))
                 {
                     if (isSelected)
                     {
