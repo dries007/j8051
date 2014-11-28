@@ -29,34 +29,19 @@
  *
  */
 
-package net.dries007.j8051.compiler.exceptions;
+package net.dries007.j8051.util.exceptions;
 
 /**
  * @author Dries007
  */
-public class IncludeException extends PreprocessorException
+public class SymbolAlreadyDefinedException extends CompileException
 {
-    public IncludeException()
+    public SymbolAlreadyDefinedException()
     {
     }
 
-    public IncludeException(String message)
+    public SymbolAlreadyDefinedException(String s)
     {
-        super(message);
-    }
-
-    public IncludeException(String message, Throwable cause)
-    {
-        super(message, cause);
-    }
-
-    public IncludeException(Throwable cause)
-    {
-        super(cause);
-    }
-
-    public IncludeException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
-    {
-        super(message, cause, enableSuppression, writableStackTrace);
+        super(s);
     }
 }

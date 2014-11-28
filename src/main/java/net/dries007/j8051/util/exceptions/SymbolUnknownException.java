@@ -29,34 +29,19 @@
  *
  */
 
-package net.dries007.j8051.compiler.exceptions;
+package net.dries007.j8051.util.exceptions;
 
 /**
  * @author Dries007
  */
-public class PreprocessorException extends CompileException
+public class SymbolUnknownException extends NumberFormatException
 {
-    public PreprocessorException()
+    public SymbolUnknownException()
     {
     }
 
-    public PreprocessorException(String message)
+    public SymbolUnknownException(String s)
     {
-        super(message);
-    }
-
-    public PreprocessorException(String message, Throwable cause)
-    {
-        super(message, cause);
-    }
-
-    public PreprocessorException(Throwable cause)
-    {
-        super(cause);
-    }
-
-    public PreprocessorException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
-    {
-        super(message, cause, enableSuppression, writableStackTrace);
+        super(s);
     }
 }

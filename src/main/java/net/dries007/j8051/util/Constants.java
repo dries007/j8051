@@ -97,8 +97,8 @@ public class Constants
     public static final Pattern DW = Pattern.compile("dw\\s+(.+?)\\b(?:,\\s*(.+?)\\b)*", CASE_INSENSITIVE);
     public static final Pattern DS = Pattern.compile("ds\\s+(.+?)\\b(?:\\s*<<\\s*(.+?)\\b)?", CASE_INSENSITIVE);
 
-    public static final Pattern ORG = Pattern.compile("(^|\\s+)org($|\\s+)", CASE_INSENSITIVE);
-    public static final Pattern END = Pattern.compile("(^|\\s+)end($|\\s+)", CASE_INSENSITIVE);
+    public static final Pattern ORG = Pattern.compile("(?:^|\\s+)org(?:$|\\s+)", CASE_INSENSITIVE);
+    public static final Pattern END = Pattern.compile("(?:^|\\s+)end(?:$|\\s+)", CASE_INSENSITIVE);
 
     // Properties used for persistent stuff like preferences
     public static final Properties PROPERTIES = new Properties();

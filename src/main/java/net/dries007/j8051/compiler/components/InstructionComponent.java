@@ -32,6 +32,9 @@
 package net.dries007.j8051.compiler.components;
 
 import net.dries007.j8051.compiler.Instruction;
+import net.dries007.j8051.util.exceptions.CompileException;
+import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
+import net.dries007.j8051.util.exceptions.SymbolUnknownException;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -43,6 +46,7 @@ public class InstructionComponent extends Component
 {
     public final Instruction.Type type;
     public Instruction instruction;
+    private Object[] objects;
 
     private InstructionComponent(int startOffset, Matcher matcher, Instruction.Type type)
     {
@@ -69,7 +73,29 @@ public class InstructionComponent extends Component
         return type;
     }
 
-    public static void resolveInstructions(LinkedList<Component> components, HashMap<String, Symbol> symbols)
+    @Override
+    public Integer getSize(Map<String, Symbol> symbols)
+    {
+        return instruction.size;
+    }
+
+    @Override
+    public void tryResolve(HashMap<String, Symbol> symbols) throws SymbolUndefinedException
+    {
+        int i = 0;
+        data = new int[instruction.size];
+        data[i++] = instruction.opcode;
+        for (Instruction.Argument argument : instruction.arguments)
+        {
+//            if (argument.addsByteCode() && argument != Instruction.Argument.REL)
+//            {
+//                if (objects[i - 1] instanceof Integer) data[i] = ((Integer) objects[i - 1]) & 0xFF;
+//                else data[i] = argument.symbolType.evaluator.evaluate((String) objects[i - 1], symbols);
+//            }
+        }
+    }
+
+    public static void resolveInstructions(LinkedList<Component> components, HashMap<String, Symbol> symbols)throws CompileException
     {
         if (components.isEmpty()) return;
         ListIterator<Component> i = components.listIterator();
@@ -91,7 +117,6 @@ public class InstructionComponent extends Component
                         {
                             i.remove();
                             prev.setSrcEnd(current.getSrcEnd());
-                            System.out.println("INSTRUMENT ARG MATCH: " + Arrays.toString(arguments) + Arrays.toString(instruction.arguments));
                             break;
                         }
                     }
@@ -101,16 +126,39 @@ public class InstructionComponent extends Component
         }
     }
 
-    private boolean matches(HashMap<String, Symbol> symbols, Instruction instruction, String[] args)
+    private boolean matches(HashMap<String, Symbol> symbols, Instruction instruction, String[] args) throws CompileException
     {
         if (instruction.arguments.length != args.length) return false;
+        Object[] data = new Object[args.length];
         for (int i = 0; i < args.length; i++)
         {
             Instruction.Argument argument = instruction.arguments[i];
-            if (argument.literal && argument.string.equalsIgnoreCase(args[i])) continue;
-            return false;
+            if (argument.string != null)
+            {
+                if (argument.string.equalsIgnoreCase(args[i]))
+                {
+                    data[i] = args[i];
+                    continue;
+                }
+                else return false;
+            }
+
+            if (argument.prefix != null && argument.prefix == args[i].charAt(0)) args[i] = args[i].substring(1);
+            try
+            {
+                data[i] = argument.symbolType.evaluator.evaluate(args[i], symbols);
+            }
+            catch (SymbolUnknownException e)
+            {
+                return false;
+            }
+            catch (SymbolUndefinedException e)
+            {
+                data[i] = args[i];
+            }
         }
         this.instruction = instruction;
+        this.objects = data;
         return true;
     }
 

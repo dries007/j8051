@@ -342,7 +342,7 @@ public class MainGui
                     constantsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)"}));
                     constantsTable.repaint();
 
-                    componentsTable.setModel(new DefaultTableModel(compiler.getComponents(), new String[]{"Start", "End", "Type", "SubType", "Contents"}));
+                    componentsTable.setModel(new DefaultTableModel(compiler.getComponents(), new String[]{"Start", "End", "Type", "SubType", "Contents", "Bytes"}));
                     componentsTable.repaint();
                 }
                 catch (Exception e)

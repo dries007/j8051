@@ -29,58 +29,34 @@
  *
  */
 
-package net.dries007.j8051.compiler.components;
-
-import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
-
-import java.util.HashMap;
-import java.util.Map;
+package net.dries007.j8051.util.exceptions;
 
 /**
  * @author Dries007
  */
-public class UnsolvedComponent extends Component
+public class CompileException extends Exception
 {
-    public final String contents;
-
-    public UnsolvedComponent(int startOffset, String contents)
+    public CompileException()
     {
-        super(startOffset, startOffset + contents.length());
-        this.contents = contents.trim();
     }
 
-    @Override
-    public String toString()
+    public CompileException(String message)
     {
-        return "UNSOLVED: " + contents;
+        super(message);
     }
 
-    public boolean shouldAdd()
+    public CompileException(String message, Throwable cause)
     {
-        return getSrcEnd() != getSrcStart();
+        super(message, cause);
     }
 
-    @Override
-    protected Object getContents()
+    public CompileException(Throwable cause)
     {
-        return contents;
+        super(cause);
     }
 
-    @Override
-    protected Object getSubType()
+    public CompileException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
     {
-        return "";
-    }
-
-    @Override
-    public Integer getSize(Map<String, Symbol> symbols)
-    {
-        throw new IllegalStateException("Method should never be used.");
-    }
-
-    @Override
-    public void tryResolve(HashMap<String, Symbol> symbols) throws SymbolUndefinedException
-    {
-
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 }

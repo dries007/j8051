@@ -40,12 +40,26 @@ public class Helper
     {
     }
 
-    public static Integer parseToInt(String string)
+    public static int parseToInt(String string)
     {
         char last = string.charAt(string.length() - 1);
         if (last == 'b' || last == 'B') return Integer.parseInt(string.substring(0, string.length() - 1), 2);
         if (last == 'h' || last == 'H') return Integer.parseInt(string.substring(0, string.length() - 1), 16);
+        if (last == 'o' || last == 'O') return Integer.parseInt(string.substring(0, string.length() - 1), 8);
         if (string.startsWith("0x")) return Integer.parseInt(string.substring(2), 16);
         return Integer.parseInt(string);
+    }
+
+    public static String toHexString(int[] data)
+    {
+        if (data == null) return "null";
+        StringBuilder stringBuilder = new StringBuilder(data.length * 5);
+        stringBuilder.append('[');
+        for (int i = 0; i < data.length; i++)
+        {
+            stringBuilder.append("0x").append(Integer.toHexString(data[i]));
+            if (i + 1 < data.length) stringBuilder.append(", ");
+        }
+        return stringBuilder.append(']').toString();
     }
 }

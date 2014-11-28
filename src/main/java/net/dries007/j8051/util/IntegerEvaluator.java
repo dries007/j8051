@@ -36,6 +36,9 @@ import com.fathzer.soft.javaluator.Function;
 import com.fathzer.soft.javaluator.Operator;
 import com.fathzer.soft.javaluator.Parameters;
 import net.dries007.j8051.compiler.components.Symbol;
+import net.dries007.j8051.util.exceptions.NotBitAdressableException;
+import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
+import net.dries007.j8051.util.exceptions.SymbolUnknownException;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -155,7 +158,7 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
             {
                 return regiser + regiser - 0x80 % 16 == 0 ? bit : 8 + bit;
             }
-            throw new NumberFormatException("Not bit addressable: " + regiser);
+            throw new NotBitAdressableException("0x" + Integer.toHexString(regiser));
         }
 
         return super.evaluate(operator, operands, evaluationContext);
@@ -172,17 +175,21 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
     @Override
     protected Integer toValue(String literal, Object evaluationContext)
     {
-        if (evaluationContext != null)
+        try
+        {
+            return Helper.parseToInt(literal);
+        }
+        catch (NumberFormatException e)
         {
             //noinspection unchecked
             HashMap<String, Symbol> map = (HashMap<String, Symbol>) evaluationContext;
-            if (map.containsKey(literal))
+            if (map.containsKey(literal.toLowerCase()))
             {
-                Symbol symbol = map.get(literal);
-                if (symbol.isDefined()) return map.get(literal).intValue;
-                else throw new NumberFormatException(symbol.key + " is still undefined.");
+                Symbol symbol = map.get(literal.toLowerCase());
+                if (symbol.isDefined()) return symbol.intValue;
+                else throw new SymbolUndefinedException(symbol.key);
             }
+            else throw new SymbolUnknownException(literal);
         }
-        return Helper.parseToInt(literal);
     }
 }

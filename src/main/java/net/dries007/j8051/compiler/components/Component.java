@@ -31,12 +31,20 @@
 
 package net.dries007.j8051.compiler.components;
 
+import net.dries007.j8051.util.Helper;
+import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
+
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * @author Dries007
  */
 public abstract class Component
 {
     private int start, end;
+    protected int[] data;
+    protected boolean resolved;
 
     protected Component(int start, int end)
     {
@@ -54,9 +62,9 @@ public abstract class Component
         return end;
     }
 
-    public Object[] getData()
+    public Object[] getDebug()
     {
-        return new Object[]{getSrcStart(), getSrcEnd(), this.getClass().getSimpleName(), getSubType(), getContents()};
+        return new Object[]{getSrcStart(), getSrcEnd(), this.getClass().getSimpleName(), getSubType(), getContents(), Helper.toHexString(data)};
     }
 
     protected abstract Object getContents();
@@ -67,4 +75,18 @@ public abstract class Component
     {
         this.end = end;
     }
+
+    public abstract Integer getSize(Map<String, Symbol> symbols);
+
+    public boolean isResolved()
+    {
+        return resolved;
+    }
+
+    public int[] getData()
+    {
+        return data;
+    }
+
+    public abstract void tryResolve(HashMap<String, Symbol> symbols) throws SymbolUndefinedException;
 }

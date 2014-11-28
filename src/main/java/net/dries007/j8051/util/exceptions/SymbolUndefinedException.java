@@ -29,58 +29,19 @@
  *
  */
 
-package net.dries007.j8051.compiler.components;
-
-import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
-
-import java.util.HashMap;
-import java.util.Map;
+package net.dries007.j8051.util.exceptions;
 
 /**
  * @author Dries007
  */
-public class UnsolvedComponent extends Component
+public class SymbolUndefinedException extends NumberFormatException
 {
-    public final String contents;
-
-    public UnsolvedComponent(int startOffset, String contents)
+    public SymbolUndefinedException()
     {
-        super(startOffset, startOffset + contents.length());
-        this.contents = contents.trim();
     }
 
-    @Override
-    public String toString()
+    public SymbolUndefinedException(String s)
     {
-        return "UNSOLVED: " + contents;
-    }
-
-    public boolean shouldAdd()
-    {
-        return getSrcEnd() != getSrcStart();
-    }
-
-    @Override
-    protected Object getContents()
-    {
-        return contents;
-    }
-
-    @Override
-    protected Object getSubType()
-    {
-        return "";
-    }
-
-    @Override
-    public Integer getSize(Map<String, Symbol> symbols)
-    {
-        throw new IllegalStateException("Method should never be used.");
-    }
-
-    @Override
-    public void tryResolve(HashMap<String, Symbol> symbols) throws SymbolUndefinedException
-    {
-
+        super(s);
     }
 }

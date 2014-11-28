@@ -32,8 +32,9 @@
 package net.dries007.j8051.compiler;
 
 import net.dries007.j8051.compiler.components.*;
-import net.dries007.j8051.compiler.exceptions.CompileException;
-import net.dries007.j8051.compiler.exceptions.PreprocessorException;
+import net.dries007.j8051.util.exceptions.CompileException;
+import net.dries007.j8051.util.exceptions.PreprocessorException;
+import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -46,19 +47,47 @@ public class Compiler
 {
     public final String preprocessed;
 
+    public final Symbol currentLocation = new Symbol();
     public final LinkedList<Component>   components = new LinkedList<>();
     public final HashMap<String, Symbol> symbols    = new HashMap<>();
 
-    public Compiler(String src) throws PreprocessorException
+    public Compiler(String src) throws CompileException
     {
         preprocessed = Preprocessor.process(src);
         components.add(new UnsolvedComponent(0, preprocessed));
+        symbols.put("$", currentLocation);
         Symbol.findSymbols(components, symbols);
         Bytes.findBytes(components);
         InstructionComponent.findInstructions(components);
         //noinspection StatementWithEmptyBody
         while (Symbol.resolveSymbols(components, symbols)) ;
         InstructionComponent.resolveInstructions(components, symbols);
+        while (resolveAll()) ;
+    }
+
+    private boolean resolveAll() throws CompileException
+    {
+        boolean resolvedAny = false;
+        currentLocation.intValue = 0;
+        for (Component component : components)
+        {
+            if (component instanceof UnsolvedComponent) throw new CompileException("Unsolved src: " + ((UnsolvedComponent) component).contents);
+            if (component.isResolved())
+            {
+                try
+                {
+                    component.tryResolve(symbols);
+                    resolvedAny = true;
+                }
+                catch (SymbolUndefinedException ignored)
+                {
+
+                }
+            }
+            currentLocation.intValue += component.getSize(symbols);
+        }
+        currentLocation.intValue = null;
+        return resolvedAny;
     }
 
     public Object[][] getComponents()
@@ -66,12 +95,12 @@ public class Compiler
         ArrayList<Object[]> data = new ArrayList<>(components.size());
         for (Component component : components)
         {
-            data.add(component.getData());
+            data.add(component.getDebug());
         }
         return data.toArray(new Object[data.size()][]);
     }
 
-    public Object[][] getSymbols() throws CompileException
+    public Object[][] getSymbols()
     {
         ArrayList<Object[]> data = new ArrayList<>(symbols.size());
         for (Symbol symbol : symbols.values())

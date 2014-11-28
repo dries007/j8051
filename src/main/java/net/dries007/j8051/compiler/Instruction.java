@@ -31,6 +31,8 @@
 
 package net.dries007.j8051.compiler;
 
+import net.dries007.j8051.compiler.components.Symbol;
+
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.LinkedList;
@@ -241,47 +243,55 @@ public class Instruction
 
     public static enum Argument
     {
-        ADDR11,
-        ADDR16,
-        DIRECT,
-        REL,
-        BIT,
-        DATA,
-        DATA16,
-        A(true, "A"),
-        AB(true, "AB"),
-        AT_R0(true, "@R0"),
-        AT_R1(true, "@R1"),
-        R0(true, "R0"),
-        R1(true, "R1"),
-        R2(true, "R2"),
-        R3(true, "R3"),
-        R4(true, "R4"),
-        R5(true, "R5"),
-        R6(true, "R6"),
-        R7(true, "R7"),
-        C(true, "C"),
-        AT_DPTR(true, "@DPTR"),
-        DPTR(true, "DPTR"),
-        SLASH_BIT,
-        AT_A_PLUS_DPTR(true, "@A+DPTR"),
-        AT_A_PLUS_PC(true, "@A+PC");
+        ADDR11(Symbol.Type.LABEL),
+        ADDR16(Symbol.Type.LABEL),
+        DIRECT(Symbol.Type.DATA),
+        REL(Symbol.Type.LABEL),
+        BIT(Symbol.Type.BIT),
+        DATA('#', Symbol.Type.DATA),
+        DATA16('#', Symbol.Type.DATA),
+        A("A"),
+        AB("AB"),
+        AT_R0("@R0"),
+        AT_R1("@R1"),
+        R0("R0"),
+        R1("R1"),
+        R2("R2"),
+        R3("R3"),
+        R4("R4"),
+        R5("R5"),
+        R6("R6"),
+        R7("R7"),
+        C("C"),
+        AT_DPTR("@DPTR"),
+        DPTR("DPTR"),
+        SLASH_BIT('/', Symbol.Type.BIT),
+        AT_A_PLUS_DPTR("@A+DPTR"),
+        AT_A_PLUS_PC("@A+PC");
 
         static Argument[] R = {Argument.R0, Argument.R1, Argument.R2, Argument.R3, Argument.R4, Argument.R5, Argument.R6, Argument.R7};
 
-        public final boolean literal;
         public final String string;
+        public final Character prefix;
+        public final Symbol.Type symbolType;
 
-        Argument(boolean literal, String string)
+        Argument(String string)
         {
-            this.literal = literal;
             this.string = string;
+            this.prefix = null;
+            this.symbolType = null;
         }
 
-        Argument()
+        Argument(Character prefix, Symbol.Type symbolType)
         {
-            literal = false;
-            string = null;
+            this.string = null;
+            this.prefix = prefix;
+            this.symbolType = symbolType;
+        }
+
+        Argument(Symbol.Type symbolType)
+        {
+            this(null, symbolType);
         }
     }
 

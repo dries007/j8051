@@ -32,8 +32,8 @@
 package net.dries007.j8051.compiler;
 
 import net.dries007.j8051.Main;
-import net.dries007.j8051.compiler.exceptions.IncludeException;
-import net.dries007.j8051.compiler.exceptions.PreprocessorException;
+import net.dries007.j8051.util.exceptions.IncludeException;
+import net.dries007.j8051.util.exceptions.PreprocessorException;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

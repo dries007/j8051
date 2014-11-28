@@ -32,10 +32,10 @@
 package net.dries007.j8051.compiler.components;
 
 import net.dries007.j8051.util.Constants;
+import net.dries007.j8051.util.IntegerEvaluator;
+import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -46,6 +46,7 @@ public class Bytes extends Component
 {
     public final Type     type;
     public final Object[] objects;
+    private int size;
 
     private Bytes(int startOffset, Matcher matcher, Type type)
     {
@@ -100,6 +101,46 @@ public class Bytes extends Component
     protected Object getSubType()
     {
         return type;
+    }
+
+    @Override
+    public Integer getSize(Map<String, Symbol> symbols)
+    {
+        if (size != -1) return size;
+        switch (type)
+        {
+            case DB:
+                return size = objects.length;
+            case DW:
+                return size = 2 * objects.length;
+            case DS: return size = IntegerEvaluator.EVALUATOR.evaluate((String) objects[0], symbols);
+        }
+        throw new IllegalStateException("Type unknown: " + type);
+    }
+
+    @Override
+    public void tryResolve(HashMap<String, Symbol> symbols) throws SymbolUndefinedException
+    {
+        data = new int[size];
+        switch (type)
+        {
+            case DB:
+                for (int i = 0; i < objects.length; i++) data[i] = IntegerEvaluator.EVALUATOR.evaluate((String) objects[i], symbols);
+            case DW:
+                for (int i = 0; i < objects.length; i++)
+                {
+                    int word = IntegerEvaluator.EVALUATOR.evaluate((String) objects[i], symbols);
+                    data[2 * i] = (word & 0xFF00) >>> 8;
+                    data[2 * i + 1] = word & 0xFF;
+                }
+            case DS:
+                int setByte = objects[1] == null ? 0 : IntegerEvaluator.EVALUATOR.evaluate((String) objects[1], symbols);
+                for (int i = 0; i < size; i++) data[i] = setByte;
+                break;
+            default:
+                throw new IllegalStateException("Type unknown: " + type);
+        }
+        resolved = true;
     }
 
     private static enum Type

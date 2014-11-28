@@ -33,7 +33,10 @@ package net.dries007.j8051.compiler.components;
 
 import net.dries007.j8051.util.Constants;
 import net.dries007.j8051.util.IntegerEvaluator;
+import net.dries007.j8051.util.exceptions.SymbolAlreadyDefinedException;
+import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -56,7 +59,14 @@ public class Symbol extends Component
         this.key = matcher.groupCount() >= 1 ? matcher.group(1) : null;
     }
 
-    public static void findSymbols(List<Component> components, Map<String, Symbol> symbols)
+    public Symbol()
+    {
+        super(-1, -1);
+        this.key = "$";
+        this.type = null;
+    }
+
+    public static void findSymbols(List<Component> components, Map<String, Symbol> symbols) throws SymbolAlreadyDefinedException
     {
         for (Type type : Type.values())
         {
@@ -76,7 +86,11 @@ public class Symbol extends Component
                     if (pre.shouldAdd()) i.add(pre);
 
                     Symbol symbol = new Symbol(pre.getSrcEnd(), matcher, type);
-                    if (symbol.key != null) symbols.put(matcher.group(1), symbol);
+                    if (symbol.key != null)
+                    {
+                        if (symbols.containsKey(symbol.key.toLowerCase())) throw new SymbolAlreadyDefinedException(symbol.toString());
+                        symbols.put(symbol.key.toLowerCase(), symbol);
+                    }
                     i.add(symbol);
 
                     UnsolvedComponent post = new UnsolvedComponent(symbol.getSrcEnd(), src.substring(matcher.end()));
@@ -99,7 +113,7 @@ public class Symbol extends Component
                 continue;
             }
             Component current = i.next();
-            if (prev instanceof Symbol && current instanceof UnsolvedComponent && !((Symbol) prev).isDefined() && ((Symbol) prev).type.evaluator != null)
+            if (prev instanceof Symbol && current instanceof UnsolvedComponent && !((Symbol) prev).isDefined() && ((Symbol) prev).type.evaluate)
             {
                 try
                 {
@@ -116,7 +130,7 @@ public class Symbol extends Component
                     }
                     resolvedAny = true;
                 }
-                catch (NumberFormatException ignored)
+                catch (SymbolUndefinedException ignored)
                 {
 
                 }
@@ -149,24 +163,37 @@ public class Symbol extends Component
         return type;
     }
 
-    private static enum Type
+    @Override
+    public Integer getSize(Map<String, Symbol> symbols)
     {
-        LABEL(false, Constants.LABEL, null),
-        EQU(true, Constants.EQU, IntegerEvaluator.EVALUATOR),
-        DATA(true, Constants.DATA, IntegerEvaluator.EVALUATOR),
-        BIT(true, Constants.BIT, IntegerEvaluator.EVALUATOR_BITS),
-        ORG(false, Constants.ORG, IntegerEvaluator.EVALUATOR),
-        END(false, Constants.END, null);
+        return 0;
+    }
+
+    @Override
+    public void tryResolve(HashMap<String, Symbol> symbols) throws SymbolUndefinedException
+    {
+
+    }
+
+    public static enum Type
+    {
+        LABEL(false, Constants.LABEL, IntegerEvaluator.EVALUATOR, false),
+        EQU(true, Constants.EQU, IntegerEvaluator.EVALUATOR, true),
+        DATA(true, Constants.DATA, IntegerEvaluator.EVALUATOR, true),
+        BIT(true, Constants.BIT, IntegerEvaluator.EVALUATOR_BITS, true),
+        ORG(false, Constants.ORG, IntegerEvaluator.EVALUATOR, true),
+        END(false, Constants.END, null, false);
 
         public final  Pattern          pattern;
         public final  IntegerEvaluator evaluator;
-        private final boolean          removeFromSrc;
+        private final boolean          removeFromSrc, evaluate;
 
-        private Type(boolean removeFromSrc, Pattern pattern, IntegerEvaluator evaluator)
+        private Type(boolean removeFromSrc, Pattern pattern, IntegerEvaluator evaluator, boolean evaluate)
         {
             this.pattern = pattern;
             this.evaluator = evaluator;
             this.removeFromSrc = removeFromSrc;
+            this.evaluate  = evaluate;
         }
 
         public boolean removeFromSrc()
