@@ -33,51 +33,158 @@ package net.dries007.j8051.compiler;
 
 import net.dries007.j8051.compiler.components.*;
 import net.dries007.j8051.util.exceptions.CompileException;
-import net.dries007.j8051.util.exceptions.PreprocessorException;
 import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
 
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.ListIterator;
 
 /**
  * @author Dries007
  */
 public class Compiler
 {
-    public final String preprocessed;
-
     public final Symbol currentLocation = new Symbol();
     public final LinkedList<Component>   components = new LinkedList<>();
     public final HashMap<String, Symbol> symbols    = new HashMap<>();
 
-    public Compiler(String src) throws CompileException
+    private Stage stage = Stage.PREPROCESSOR;
+    public String    src;
+    public Integer[] hex = new Integer[0];
+
+    public Compiler(String src)
     {
-        preprocessed = Preprocessor.process(src);
-        components.add(new UnsolvedComponent(0, preprocessed));
-        symbols.put("$", currentLocation);
-        Symbol.findSymbols(components, symbols);
-        Bytes.findBytes(components);
-        InstructionComponent.findInstructions(components);
-        //noinspection StatementWithEmptyBody
-        while (Symbol.resolveSymbols(components, symbols)) ;
-        InstructionComponent.resolveInstructions(components, symbols);
-        while (resolveAll()) ;
+        this.src = src;
+    }
+
+    public boolean hasWork()
+    {
+        return stage != Stage.DONE;
+    }
+
+    public void doWork() throws Exception
+    {
+        stage.work(this);
+        stage = stage.nextStep;
+    }
+
+    private static enum Stage
+    {
+        DONE(null)
+                {
+                    @Override
+                    public void work(Compiler compiler) throws Exception
+                    {
+                    }
+                },
+        MAKE_HEX(DONE)
+                {
+                    @Override
+                    public void work(Compiler compiler) throws Exception
+                    {
+                        LinkedList<Integer> hexList = new LinkedList<>();
+                        for (Component component : compiler.components) for (int b : component.getData()) hexList.add(b);
+                        compiler.hex = hexList.toArray(new Integer[hexList.size()]);
+                    }
+                },
+        RESOLVE_ALL(MAKE_HEX)
+                {
+                    @Override
+                    public void work(Compiler compiler) throws Exception
+                    {
+                        //noinspection StatementWithEmptyBody
+                        while (compiler.resolveAll()) ;
+                    }
+                },
+        RESOLVE_INSTRUCTIONS(RESOLVE_ALL)
+                {
+                    @Override
+                    public void work(Compiler compiler) throws Exception
+                    {
+                        InstructionComponent.resolveInstructions(compiler.components, compiler.symbols);
+                    }
+                },
+        RESOLVE_SYMBOLS(RESOLVE_INSTRUCTIONS)
+                {
+                    @Override
+                    public void work(Compiler compiler) throws Exception
+                    {
+                        //noinspection StatementWithEmptyBody
+                        while (Symbol.resolveSymbols(compiler.components, compiler.symbols)) ;
+                    }
+                },
+        FIND_INSTRUCTIONS(RESOLVE_SYMBOLS)
+                {
+                    @Override
+                    public void work(Compiler compiler) throws Exception
+                    {
+                        InstructionComponent.findInstructions(compiler.components);
+                    }
+                },
+        FIND_BYTES(FIND_INSTRUCTIONS)
+                {
+                    @Override
+                    public void work(Compiler compiler) throws Exception
+                    {
+                        Bytes.findBytes(compiler.components);
+                    }
+                },
+        FIND_SYMBOLS(FIND_BYTES)
+                {
+                    @Override
+                    public void work(Compiler compiler) throws Exception
+                    {
+                        Symbol.findSymbols(compiler.components, compiler.symbols);
+                    }
+                },
+        PREPROCESSOR(FIND_SYMBOLS)
+                {
+                    @Override
+                    public void work(Compiler compiler) throws Exception
+                    {
+                        compiler.src = Preprocessor.process(compiler.src);
+                        compiler.components.add(new SrcComponent(0, compiler.src));
+                        compiler.symbols.put("$", compiler.currentLocation);
+                    }
+                };
+
+        public final Stage nextStep;
+
+        Stage(Stage nextStep)
+        {
+            this.nextStep = nextStep;
+        }
+
+        public abstract void work(Compiler compiler) throws Exception;
     }
 
     private boolean resolveAll() throws CompileException
     {
         boolean resolvedAny = false;
         currentLocation.intValue = 0;
-        for (Component component : components)
+        ListIterator<Component> i = components.listIterator();
+        while (i.hasNext())
         {
-            if (component instanceof UnsolvedComponent) throw new CompileException("Unsolved src: " + ((UnsolvedComponent) component).contents);
-            if (component.isResolved())
+            Component component = i.next();
+            component.address = currentLocation.intValue;
+            if (component instanceof SrcComponent) throw new CompileException(component, "Unsolved src: " + ((SrcComponent) component).contents);
+            if (!component.isResolved())
             {
                 try
                 {
-                    component.tryResolve(symbols);
+                    component.tryResolve(currentLocation.intValue, symbols);
+                    component.setResolved(true);
+
+                    if (component instanceof Symbol) i.remove();
+
                     resolvedAny = true;
+                }
+                catch (ArrayIndexOutOfBoundsException e)
+                {
+                    throw new CompileException(component, "", e);
                 }
                 catch (SymbolUndefinedException ignored)
                 {
@@ -105,8 +212,27 @@ public class Compiler
         ArrayList<Object[]> data = new ArrayList<>(symbols.size());
         for (Symbol symbol : symbols.values())
         {
-            data.add(new Object[]{symbol.key, symbol.type, symbol.isDefined() ? Integer.toHexString(symbol.intValue) : "_UNDEFINED_", symbol.isDefined() ? symbol.intValue : "_UNDEFINED_"});
+            data.add(new Object[]{symbol.key, symbol.type, symbol.isDefined() ? String.format("0x%04X", symbol.intValue) : "_UNDEFINED_", symbol.isDefined() ? String.format("%04d", symbol.intValue) : "_UNDEFINED_", symbol.stringValue});
         }
         return data.toArray(new Object[data.size()][]);
+    }
+
+    public Object[][] getHexTable()
+    {
+        ArrayList<String[]> data = new ArrayList<>(hex.length / 16);
+        for (int i = 0; i <= hex.length / 16; i++)
+        {
+            String[] line = new String[17];
+            line[0] = String.format("0x%02X - 0x%2X", i, i + 16);
+            for (int j = 0; j < 16; j++)
+            {
+                if (hex.length == (i * 16) + j) break;
+                System.out.print(String.format("%02X ", hex[(i * 16) + j]));
+                line[1 + j] = String.format("%02X", hex[(i * 16) + j]);
+            }
+            System.out.println();
+            data.add(line);
+        }
+        return data.toArray(new String[data.size()][]);
     }
 }

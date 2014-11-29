@@ -51,6 +51,7 @@ public class Symbol extends Component
     public final String  key;
     public final Type    type;
     public       Integer intValue;
+    public       String  stringValue;
 
     private Symbol(int startOffset, Matcher matcher, Type type)
     {
@@ -74,26 +75,26 @@ public class Symbol extends Component
             while (i.hasPrevious())
             {
                 Component component = i.previous();
-                if (component instanceof UnsolvedComponent)
+                if (component instanceof SrcComponent)
                 {
-                    String src = ((UnsolvedComponent) component).contents;
+                    String src = ((SrcComponent) component).contents;
 
                     Matcher matcher = type.pattern.matcher(src);
                     if (!matcher.find()) continue;
                     i.remove();
 
-                    UnsolvedComponent pre = new UnsolvedComponent(component.getSrcStart(), src.substring(0, matcher.start()));
+                    SrcComponent pre = new SrcComponent(component.getSrcStart(), src.substring(0, matcher.start()));
                     if (pre.shouldAdd()) i.add(pre);
 
                     Symbol symbol = new Symbol(pre.getSrcEnd(), matcher, type);
                     if (symbol.key != null)
                     {
-                        if (symbols.containsKey(symbol.key.toLowerCase())) throw new SymbolAlreadyDefinedException(symbol.toString());
+                        if (symbols.containsKey(symbol.key.toLowerCase())) throw new SymbolAlreadyDefinedException(symbol, symbol.toString());
                         symbols.put(symbol.key.toLowerCase(), symbol);
                     }
                     i.add(symbol);
 
-                    UnsolvedComponent post = new UnsolvedComponent(symbol.getSrcEnd(), src.substring(matcher.end()));
+                    SrcComponent post = new SrcComponent(symbol.getSrcEnd(), src.substring(matcher.end()));
                     if (post.shouldAdd()) i.add(post);
                 }
             }
@@ -113,11 +114,12 @@ public class Symbol extends Component
                 continue;
             }
             Component current = i.next();
-            if (prev instanceof Symbol && current instanceof UnsolvedComponent && !((Symbol) prev).isDefined() && ((Symbol) prev).type.evaluate)
+            if (prev instanceof Symbol && current instanceof SrcComponent && !((Symbol) prev).isDefined() && ((Symbol) prev).type.evaluate)
             {
                 try
                 {
-                    ((Symbol) prev).intValue = ((Symbol) prev).type.evaluator.evaluate(((UnsolvedComponent) current).contents.replaceAll("[\\r\\n]+", " "), symbols);
+                    ((Symbol) prev).intValue = ((Symbol) prev).type.evaluator.evaluate(((SrcComponent) current).contents.replaceAll("[\\r\\n]+", " "), symbols);
+                    ((Symbol) prev).stringValue = ((SrcComponent) current).contents;
                     i.remove();
                     if (((Symbol) prev).type.removeFromSrc())
                     {
@@ -170,9 +172,9 @@ public class Symbol extends Component
     }
 
     @Override
-    public void tryResolve(HashMap<String, Symbol> symbols) throws SymbolUndefinedException
+    public void tryResolve(int currentLocation, HashMap<String, Symbol> symbols) throws SymbolUndefinedException
     {
-
+        if (this.type == Type.LABEL) this.intValue = currentLocation;
     }
 
     public static enum Type
@@ -190,9 +192,9 @@ public class Symbol extends Component
 
         private Type(boolean removeFromSrc, Pattern pattern, IntegerEvaluator evaluator, boolean evaluate)
         {
+            this.removeFromSrc = removeFromSrc;
             this.pattern = pattern;
             this.evaluator = evaluator;
-            this.removeFromSrc = removeFromSrc;
             this.evaluate  = evaluate;
         }
 

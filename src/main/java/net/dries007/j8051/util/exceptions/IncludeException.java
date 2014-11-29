@@ -31,32 +31,20 @@
 
 package net.dries007.j8051.util.exceptions;
 
+import net.dries007.j8051.compiler.components.Component;
+
 /**
  * @author Dries007
  */
 public class IncludeException extends PreprocessorException
 {
-    public IncludeException()
+    public IncludeException(Component component)
     {
+        super(component);
     }
 
-    public IncludeException(String message)
+    public IncludeException(Component component, String message)
     {
-        super(message);
-    }
-
-    public IncludeException(String message, Throwable cause)
-    {
-        super(message, cause);
-    }
-
-    public IncludeException(Throwable cause)
-    {
-        super(cause);
-    }
-
-    public IncludeException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
-    {
-        super(message, cause, enableSuppression, writableStackTrace);
+        super(component, message);
     }
 }

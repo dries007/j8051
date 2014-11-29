@@ -31,6 +31,8 @@
 
 package net.dries007.j8051.util;
 
+import net.dries007.j8051.util.exceptions.NotBitAddressableException;
+
 /**
  * @author Dries007
  */
@@ -57,9 +59,24 @@ public class Helper
         stringBuilder.append('[');
         for (int i = 0; i < data.length; i++)
         {
-            stringBuilder.append("0x").append(Integer.toHexString(data[i]));
+            stringBuilder.append(String.format("0x%02X", data[i]));
             if (i + 1 < data.length) stringBuilder.append(", ");
         }
         return stringBuilder.append(']').toString();
+    }
+
+    public static int getBitAddress(final int regiser, final int bit)
+    {
+        if (bit < 0 || bit > 7) throw new NumberFormatException("Bit invalid: " + bit);
+        if (regiser >= 0x20 && regiser < 0x30)
+        {
+            int result = regiser - 0x20;
+            return 16 * (result / 2) + (regiser % 2 == 0 ? bit : 8 + bit);
+        }
+        if (regiser >= 0x80 && regiser < 0xFF && regiser % 8 == 0)
+        {
+            return regiser + bit;
+        }
+        throw new NotBitAddressableException(String.format("Bit Not Addressable: 0x%02X.%d", regiser, bit));
     }
 }

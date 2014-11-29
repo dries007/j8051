@@ -76,14 +76,14 @@ public class Constants
     /*
      * Regex
      */
-    public static final Pattern INCLUDE_A = Pattern.compile("^#include \"(.*)\"$", CASE_INSENSITIVE);
-    public static final Pattern INCLUDE_R = Pattern.compile("^#include <(.*)>$", CASE_INSENSITIVE);
-    public static final Pattern DEFINE    = Pattern.compile("^#define (\\w+?)(?:\\((.*)\\))? (.*)$", CASE_INSENSITIVE);
-    public static final Pattern UNDEFINE  = Pattern.compile("^#undefine (\\w+?)$", CASE_INSENSITIVE);
-    public static final Pattern IFDEF     = Pattern.compile("^#ifdef (\\w+?)$", CASE_INSENSITIVE);
-    public static final Pattern IFNDEF    = Pattern.compile("^#ifndef (\\w+?)$", CASE_INSENSITIVE);
-    public static final Pattern ELSE      = Pattern.compile("^#else  ?$", CASE_INSENSITIVE);
-    public static final Pattern ENDIF     = Pattern.compile("^#endif  ?$", CASE_INSENSITIVE);
+    public static final Pattern INCLUDE_A = Pattern.compile("^\\s*#include\\s+\"(.*)\"\\s*$", CASE_INSENSITIVE);
+    public static final Pattern INCLUDE_R = Pattern.compile("^\\s*#include\\s+<(.*)>\\s*$", CASE_INSENSITIVE);
+    public static final Pattern DEFINE    = Pattern.compile("^\\s*#define\\s+(\\w+?)(?:\\((.*)\\))? (.*)$", CASE_INSENSITIVE);
+    public static final Pattern UNDEFINE  = Pattern.compile("^\\s*#undefine\\s+(\\w+?)\\s*$", CASE_INSENSITIVE);
+    public static final Pattern IFDEF     = Pattern.compile("^\\s*#ifdef\\s+(\\w+?)\\s*$", CASE_INSENSITIVE);
+    public static final Pattern IFNDEF    = Pattern.compile("^\\s*#ifndef\\s+(\\w+?)\\s*$", CASE_INSENSITIVE);
+    public static final Pattern ELSE      = Pattern.compile("^\\s*#else \\s*$", CASE_INSENSITIVE);
+    public static final Pattern ENDIF     = Pattern.compile("^\\s*#endif\\s*$", CASE_INSENSITIVE);
 
     public static final Pattern STRING = Pattern.compile("\"(.*)\"");
     public static final Pattern CHAR   = Pattern.compile("'(.)'");
@@ -93,8 +93,8 @@ public class Constants
     public static final Pattern BIT   = Pattern.compile("(\\w+)\\s+bit\\s", CASE_INSENSITIVE);
     public static final Pattern LABEL = Pattern.compile("(\\w+):");
 
-    public static final Pattern DB = Pattern.compile("db\\s+(.+?)\\b(?:,\\s*(.+?)\\b)*", CASE_INSENSITIVE);
-    public static final Pattern DW = Pattern.compile("dw\\s+(.+?)\\b(?:,\\s*(.+?)\\b)*", CASE_INSENSITIVE);
+    public static final Pattern DB = Pattern.compile("db\\s+((.+?)\\b(?:,\\s*(?:.+?)\\b)*)", CASE_INSENSITIVE);
+    public static final Pattern DW = Pattern.compile("dw\\s+((.+?)\\b(?:,\\s*(?:.+?)\\b)*)", CASE_INSENSITIVE);
     public static final Pattern DS = Pattern.compile("ds\\s+(.+?)\\b(?:\\s*<<\\s*(.+?)\\b)?", CASE_INSENSITIVE);
 
     public static final Pattern ORG = Pattern.compile("(?:^|\\s+)org(?:$|\\s+)", CASE_INSENSITIVE);

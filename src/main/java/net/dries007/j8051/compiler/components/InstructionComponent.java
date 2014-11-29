@@ -32,6 +32,7 @@
 package net.dries007.j8051.compiler.components;
 
 import net.dries007.j8051.compiler.Instruction;
+import net.dries007.j8051.util.exceptions.AddressOutOfRandException;
 import net.dries007.j8051.util.exceptions.CompileException;
 import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
 import net.dries007.j8051.util.exceptions.SymbolUnknownException;
@@ -64,13 +65,13 @@ public class InstructionComponent extends Component
     @Override
     protected Object getContents()
     {
-        return instruction;
+        return Arrays.toString(objects);
     }
 
     @Override
     protected Object getSubType()
     {
-        return type;
+        return instruction == null ? type : instruction;
     }
 
     @Override
@@ -80,18 +81,53 @@ public class InstructionComponent extends Component
     }
 
     @Override
-    public void tryResolve(HashMap<String, Symbol> symbols) throws SymbolUndefinedException
+    public void tryResolve(final int currentLocation, HashMap<String, Symbol> symbols) throws SymbolUndefinedException, CompileException
     {
-        int i = 0;
+        if (instruction == null) throw new CompileException(this, "Unresolved instruction: " + type + " " + Arrays.toString(objects));
+        int datai = 1, dataj = 0;
         data = new int[instruction.size];
-        data[i++] = instruction.opcode;
+        data[0] = instruction.opcode;
         for (Instruction.Argument argument : instruction.arguments)
         {
-//            if (argument.addsByteCode() && argument != Instruction.Argument.REL)
-//            {
-//                if (objects[i - 1] instanceof Integer) data[i] = ((Integer) objects[i - 1]) & 0xFF;
-//                else data[i] = argument.symbolType.evaluator.evaluate((String) objects[i - 1], symbols);
-//            }
+            if (argument.bytesAdded != 0)
+            {
+                if (objects[dataj] instanceof Integer)
+                {
+                    for (int i = 0; i < argument.bytesAdded; i++)
+                    {
+                        data[datai++] = (((Integer) objects[dataj]) >>> ((argument.bytesAdded - 1- i) * 8)) & 0xFF;
+                    }
+                }
+                else if (argument == Instruction.Argument.ADDR11)
+                {
+                    int value = argument.symbolType.evaluator.evaluate((String) objects[dataj], symbols);
+                    final int next = currentLocation + instruction.size;
+                    if ((next & 0xF800) != (value & 0xF800)) throw new AddressOutOfRandException(objects[dataj] + " is out of range."); // 5 msbit must match
+                    data[0] = (data[0] & 0x1F) | ((value & 0x700) >>> 3); // Set the 3 msbit of the opcode to the 3 lsbit of the msbyte of the address
+                    data[datai++] = value & 0xFF; // set next byte to the lsbyte of the address
+                }
+                else
+                {
+                    int value = argument.symbolType.evaluator.evaluate((String) objects[dataj], symbols);
+                    if (argument == Instruction.Argument.REL)
+                    {
+                        value -= (currentLocation + instruction.size);
+                        if (value > 127 || value < -128) throw new AddressOutOfRandException(objects[dataj] + " is out of range.");
+                        value &= 0xFF;
+                    }
+                    for (int i = 0; i < argument.bytesAdded; i++)
+                    {
+                        data[datai++] = (value >>> ((argument.bytesAdded - 1 - i) * 8)) & 0xFF;
+                    }
+                }
+            }
+            dataj++;
+        }
+        if (instruction.reverseOperands) // Because of 0x85
+        {
+            int swap = data[1];
+            data[1] = data[2];
+            data[2] = swap;
         }
     }
 
@@ -103,11 +139,11 @@ public class InstructionComponent extends Component
         while (i.hasNext())
         {
             Component current = i.next();
-            if (prev instanceof InstructionComponent && current instanceof UnsolvedComponent)
+            if (prev instanceof InstructionComponent && current instanceof SrcComponent)
             {
                 InstructionComponent instructionComponent = (InstructionComponent) prev;
-                UnsolvedComponent unsolvedComponent = (UnsolvedComponent) current;
-                String[] arguments = unsolvedComponent.contents.split(",\\s*");
+                SrcComponent srcComponent = (SrcComponent) current;
+                String[] arguments = srcComponent.contents.split(",\\s*");
                 if (instructionComponent.instruction == null)
                 {
                     List<Instruction> instructions = instructionComponent.type.getInstructions();
@@ -143,7 +179,11 @@ public class InstructionComponent extends Component
                 else return false;
             }
 
-            if (argument.prefix != null && argument.prefix == args[i].charAt(0)) args[i] = args[i].substring(1);
+            if (argument.prefix != null)
+            {
+                if (argument.prefix != args[i].charAt(0)) return false;
+                args[i] = args[i].substring(1);
+            }
             try
             {
                 data[i] = argument.symbolType.evaluator.evaluate(args[i], symbols);
@@ -170,21 +210,21 @@ public class InstructionComponent extends Component
             while (i.hasPrevious())
             {
                 Component component = i.previous();
-                if (component instanceof UnsolvedComponent)
+                if (component instanceof SrcComponent)
                 {
-                    String src = ((UnsolvedComponent) component).contents;
+                    String src = ((SrcComponent) component).contents;
 
                     Matcher matcher = type.pattern.matcher(src);
                     if (!matcher.find()) continue;
                     i.remove();
 
-                    UnsolvedComponent pre = new UnsolvedComponent(component.getSrcStart(), src.substring(0, matcher.start()));
+                    SrcComponent pre = new SrcComponent(component.getSrcStart(), src.substring(0, matcher.start()));
                     if (pre.shouldAdd()) i.add(pre);
 
                     InstructionComponent instructionComponent = new InstructionComponent(pre.getSrcEnd(), matcher, type);
                     i.add(instructionComponent);
 
-                    UnsolvedComponent post = new UnsolvedComponent(instructionComponent.getSrcEnd(), src.substring(matcher.end()));
+                    SrcComponent post = new SrcComponent(instructionComponent.getSrcEnd(), src.substring(matcher.end()));
                     if (post.shouldAdd()) i.add(post);
                 }
             }

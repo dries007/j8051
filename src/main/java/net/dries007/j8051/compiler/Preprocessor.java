@@ -57,7 +57,7 @@ public class Preprocessor
     {
     }
 
-    public static String process(String srcText) throws PreprocessorException
+    public static String process(String srcText) throws PreprocessorException, IOException
     {
         Matcher matcher;
         LinkedList<String> lines = new LinkedList<>();
@@ -104,7 +104,7 @@ public class Preprocessor
                 matcher = DEFINE.matcher(src);
                 if (matcher.matches())
                 {
-                    if (symbols.containsKey(matcher.group(1))) throw new PreprocessorException(matcher.group(1) + " already defined.");
+                    if (symbols.containsKey(matcher.group(1))) throw new PreprocessorException(null, matcher.group(1) + " already defined.");
                     symbols.put(matcher.group(1), new Macro(matcher, i));
                     continue;
                 }
@@ -179,20 +179,13 @@ public class Preprocessor
         return src;
     }
 
-    private static void include(ListIterator<String> i, File file) throws IncludeException
+    private static void include(ListIterator<String> i, File file) throws IncludeException, IOException
     {
-        try
+        for (String line : FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, "Cp1252")).split("[\\r\\n]+"))
         {
-            for (String line : FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, "Cp1252")).split("[\\r\\n]+"))
-            {
-                int comment = line.indexOf(PREFIX_COMMENT);
-                line = (comment == -1 ? line : line.substring(0, comment)).replaceAll("^\\s+|\\s+$", "");
-                if (!line.isEmpty()) i.add(line);
-            }
-        }
-        catch (IOException e)
-        {
-            throw new IncludeException(e);
+            int comment = line.indexOf(PREFIX_COMMENT);
+            line = (comment == -1 ? line : line.substring(0, comment)).replaceAll("^\\s+|\\s+$", "");
+            if (!line.isEmpty()) i.add(line);
         }
     }
 

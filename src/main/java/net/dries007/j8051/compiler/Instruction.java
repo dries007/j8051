@@ -31,12 +31,11 @@
 
 package net.dries007.j8051.compiler;
 
+import net.dries007.j8051.compiler.components.Bytes;
 import net.dries007.j8051.compiler.components.Symbol;
+import net.dries007.j8051.util.Helper;
 
-import java.util.Arrays;
-import java.util.EnumMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
@@ -83,7 +82,7 @@ public class Instruction
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.RET);                                                  //0x22
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.RL, Argument.A);                                       //0x23
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.ADD, Argument.A, Argument.DATA);                       //0x24
-        INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.ADD, Argument.A, Argument.ADDR16);                     //0x25
+        INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.ADD, Argument.A, Argument.DIRECT);                     //0x25
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.ADD, Argument.A, Argument.AT_R0);                      //0x26
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.ADD, Argument.A, Argument.AT_R1);                      //0x27
         for (int i = 0; i < 8; i++)
@@ -93,7 +92,7 @@ public class Instruction
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.RETI);                                                 //0x32
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.RLC, Argument.A);                                      //0x33
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.ADDC, Argument.A, Argument.DATA);                      //0x34
-        INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.ADDC, Argument.A, Argument.ADDR16);                    //0x35
+        INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.ADDC, Argument.A, Argument.DIRECT);                    //0x35
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.ADDC, Argument.A, Argument.AT_R0);                     //0x36
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.ADDC, Argument.A, Argument.AT_R1);                     //0x37
         for (int i = 0; i < 8; i++)
@@ -137,13 +136,13 @@ public class Instruction
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.MOV, Argument.AT_R0, Argument.DATA);                   //0x76
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.MOV, Argument.AT_R1, Argument.DATA);                   //0x77
         for (int i = 0; i < 8; i++)
-            INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.MOV, Argument.R[i], Argument.DATA);                //0x78 -> 0x7F
+            INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.MOV, Argument.R[i], Argument.DATA);                //0x78 -> 0x7F
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.SJMP, Argument.REL);                                   //0x80
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.AJMP, Argument.ADDR11);                                //0x81
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.ANL, Argument.C, Argument.BIT);                        //0x82
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.MOVC, Argument.A, Argument.AT_A_PLUS_PC);              //0x83
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 1, Type.DIV, Argument.AB);                                     //0x84
-        INSTRUCTIONS[opcode] = new Instruction(opcode++, 3, Type.MOV, Argument.DIRECT, Argument.DIRECT);                //0x85
+        INSTRUCTIONS[opcode] = new Instruction(opcode++, 3, true, Type.MOV, Argument.DIRECT, Argument.DIRECT);                //0x85 THIS OPERATION REVERSES THE OPERANDS!
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.MOV, Argument.DIRECT, Argument.AT_R0);                 //0x86
         INSTRUCTIONS[opcode] = new Instruction(opcode++, 2, Type.MOV, Argument.DIRECT, Argument.AT_R1);                 //0x87
         for (int i = 0; i < 8; i++)
@@ -224,32 +223,41 @@ public class Instruction
     public final int        opcode;
     public final int        size;
     public final Argument[] arguments;
+    public final boolean reverseOperands;
 
-    private Instruction(int opcode, int size, Type type, Argument... arguments)
+    private Instruction(int opcode, int size, boolean reverseOperands, Type type, Argument... arguments)
     {
         this.opcode = opcode;
-        this.type = type;
         this.size = size;
+        this.reverseOperands = reverseOperands;
+        this.type = type;
         this.arguments = arguments;
         TYPE_INSTRUCTION_ENUM_MAP.get(type).add(this);
         if (arguments.length == 0) SIMPLE_INSTRUCTIONS.put(type, this);
     }
 
+    private Instruction(int opcode, int size, Type type, Argument... arguments)
+    {
+        this(opcode, size, false, type, arguments);
+    }
+
     @Override
     public String toString()
     {
-        return type + " " + Arrays.toString(arguments) + " Size:" + size;
+        return type + " " + Arrays.toString(arguments);
     }
 
     public static enum Argument
     {
-        ADDR11(Symbol.Type.LABEL),
-        ADDR16(Symbol.Type.LABEL),
-        DIRECT(Symbol.Type.DATA),
-        REL(Symbol.Type.LABEL),
-        BIT(Symbol.Type.BIT),
-        DATA('#', Symbol.Type.DATA),
-        DATA16('#', Symbol.Type.DATA),
+        ADDR11(1, null, Symbol.Type.LABEL), // 5 msbit of next instruction (A) + 3 msbit of opcode (B) + 1 byte (C) = new address -> AAAA ABBB  CCCC CCCC
+        ADDR16(2, null, Symbol.Type.LABEL), // 2 bytes = new address
+        DIRECT(1, null, Symbol.Type.DATA),
+        REL(1, null, Symbol.Type.LABEL), // rel + next instruction = new address. rel = 2's complement!!
+        BIT(1, null, Symbol.Type.BIT),
+        DATA(1, '#', Symbol.Type.DATA),
+        DATA16(2, '#', Symbol.Type.DATA),
+        SLASH_BIT(1, '/', Symbol.Type.BIT),
+
         A("A"),
         AB("AB"),
         AT_R0("@R0"),
@@ -265,33 +273,30 @@ public class Instruction
         C("C"),
         AT_DPTR("@DPTR"),
         DPTR("DPTR"),
-        SLASH_BIT('/', Symbol.Type.BIT),
         AT_A_PLUS_DPTR("@A+DPTR"),
         AT_A_PLUS_PC("@A+PC");
 
         static Argument[] R = {Argument.R0, Argument.R1, Argument.R2, Argument.R3, Argument.R4, Argument.R5, Argument.R6, Argument.R7};
 
-        public final String string;
-        public final Character prefix;
+        public final String      string;
+        public final Character   prefix;
         public final Symbol.Type symbolType;
+        public final int         bytesAdded;
 
         Argument(String string)
         {
+            this.bytesAdded = 0;
             this.string = string;
             this.prefix = null;
             this.symbolType = null;
         }
 
-        Argument(Character prefix, Symbol.Type symbolType)
+        Argument(int bytesAdded, Character prefix, Symbol.Type symbolType)
         {
-            this.string = null;
+            this.bytesAdded = bytesAdded;
             this.prefix = prefix;
             this.symbolType = symbolType;
-        }
-
-        Argument(Symbol.Type symbolType)
-        {
-            this(null, symbolType);
+            this.string = null;
         }
     }
 

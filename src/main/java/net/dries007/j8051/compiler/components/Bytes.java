@@ -46,7 +46,7 @@ public class Bytes extends Component
 {
     public final Type     type;
     public final Object[] objects;
-    private int size;
+    private int size = -1;
 
     private Bytes(int startOffset, Matcher matcher, Type type)
     {
@@ -70,21 +70,21 @@ public class Bytes extends Component
             while (i.hasPrevious())
             {
                 Component component = i.previous();
-                if (component instanceof UnsolvedComponent)
+                if (component instanceof SrcComponent)
                 {
-                    String src = ((UnsolvedComponent) component).contents;
+                    String src = ((SrcComponent) component).contents;
 
                     Matcher matcher = type.pattern.matcher(src);
                     if (!matcher.find()) continue;
                     i.remove();
 
-                    UnsolvedComponent pre = new UnsolvedComponent(component.getSrcStart(), src.substring(0, matcher.start()));
+                    SrcComponent pre = new SrcComponent(component.getSrcStart(), src.substring(0, matcher.start()));
                     if (pre.shouldAdd()) i.add(pre);
 
                     Bytes bytes = new Bytes(pre.getSrcEnd(), matcher, type);
                     i.add(bytes);
 
-                    UnsolvedComponent post = new UnsolvedComponent(bytes.getSrcEnd(), src.substring(matcher.end()));
+                    SrcComponent post = new SrcComponent(bytes.getSrcEnd(), src.substring(matcher.end()));
                     if (post.shouldAdd()) i.add(post);
                 }
             }
@@ -119,13 +119,14 @@ public class Bytes extends Component
     }
 
     @Override
-    public void tryResolve(HashMap<String, Symbol> symbols) throws SymbolUndefinedException
+    public void tryResolve(int currentLocation, HashMap<String, Symbol> symbols) throws SymbolUndefinedException
     {
-        data = new int[size];
+        data = new int[getSize(symbols)];
         switch (type)
         {
             case DB:
                 for (int i = 0; i < objects.length; i++) data[i] = IntegerEvaluator.EVALUATOR.evaluate((String) objects[i], symbols);
+                break;
             case DW:
                 for (int i = 0; i < objects.length; i++)
                 {
@@ -133,6 +134,7 @@ public class Bytes extends Component
                     data[2 * i] = (word & 0xFF00) >>> 8;
                     data[2 * i + 1] = word & 0xFF;
                 }
+                break;
             case DS:
                 int setByte = objects[1] == null ? 0 : IntegerEvaluator.EVALUATOR.evaluate((String) objects[1], symbols);
                 for (int i = 0; i < size; i++) data[i] = setByte;
@@ -140,7 +142,6 @@ public class Bytes extends Component
             default:
                 throw new IllegalStateException("Type unknown: " + type);
         }
-        resolved = true;
     }
 
     private static enum Type

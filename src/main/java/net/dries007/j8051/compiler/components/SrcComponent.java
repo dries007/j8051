@@ -39,11 +39,11 @@ import java.util.Map;
 /**
  * @author Dries007
  */
-public class UnsolvedComponent extends Component
+public class SrcComponent extends Component
 {
     public final String contents;
 
-    public UnsolvedComponent(int startOffset, String contents)
+    public SrcComponent(int startOffset, String contents)
     {
         super(startOffset, startOffset + contents.length());
         this.contents = contents.trim();
@@ -79,8 +79,8 @@ public class UnsolvedComponent extends Component
     }
 
     @Override
-    public void tryResolve(HashMap<String, Symbol> symbols) throws SymbolUndefinedException
+    public void tryResolve(int currentLocation, HashMap<String, Symbol> symbols) throws SymbolUndefinedException
     {
-
+        throw new IllegalStateException("Method should never be used.");
     }
 }

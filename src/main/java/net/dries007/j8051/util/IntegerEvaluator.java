@@ -36,7 +36,6 @@ import com.fathzer.soft.javaluator.Function;
 import com.fathzer.soft.javaluator.Operator;
 import com.fathzer.soft.javaluator.Parameters;
 import net.dries007.j8051.compiler.components.Symbol;
-import net.dries007.j8051.util.exceptions.NotBitAdressableException;
 import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
 import net.dries007.j8051.util.exceptions.SymbolUnknownException;
 
@@ -145,22 +144,7 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
         if (LOGICAL_NOT == operator) return operands.next() == 0 ? 1 : 0;
         if (NEGATE == operator) return -operands.next();
         if (COMPLEMENT == operator) return ~operands.next();
-        if (DOT == operator)
-        {
-            Integer regiser = operands.next();
-            Integer bit = operands.next();
-            if (regiser >= 0x20 && regiser < 0x30)
-            {
-                regiser -= 0x20;
-                return (regiser / 2) + regiser % 2 == 0 ? bit : 8 + bit;
-            }
-            if (regiser >= 0x80 && regiser < 0xFF && regiser % 8 == 0)
-            {
-                return regiser + regiser - 0x80 % 16 == 0 ? bit : 8 + bit;
-            }
-            throw new NotBitAdressableException("0x" + Integer.toHexString(regiser));
-        }
-
+        if (DOT == operator) return Helper.getBitAddress(operands.next(), operands.next());
         return super.evaluate(operator, operands, evaluationContext);
     }
 
@@ -168,7 +152,7 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
     protected Integer evaluate(Function function, Iterator<Integer> arguments, Object evaluationContext)
     {
         if (LOW == function) return arguments.next() & 0xFF;
-        if (HIGH == function) return arguments.next() >> 8;
+        if (HIGH == function) return arguments.next() >>> 8;
         return super.evaluate(function, arguments, evaluationContext);
     }
 

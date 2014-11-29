@@ -34,6 +34,7 @@ import net.dries007.j8051.Main;
 import net.dries007.j8051.compiler.Compiler;
 import net.dries007.j8051.util.FileWatcher;
 import net.dries007.j8051.util.JFontChooser;
+import net.dries007.j8051.util.exceptions.CompileException;
 import org.apache.commons.io.FileUtils;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
@@ -41,6 +42,8 @@ import org.fife.ui.rtextarea.RTextScrollPane;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumnModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import java.awt.*;
@@ -76,10 +79,11 @@ public class MainGui
     private       JTextArea         preText;
     private       JTable            constantsTable;
     private       JTable            componentsTable;
-    private       JCheckBoxMenuItem autoLoad;
-    private       JCheckBoxMenuItem autoSave;
-    private       JCheckBoxMenuItem autoCompile;
-    private       JMenuItem         includeFolder;
+    private JTable            hexTable;
+    private JCheckBoxMenuItem autoLoad;
+    private JCheckBoxMenuItem autoSave;
+    private JCheckBoxMenuItem autoCompile;
+    private JMenuItem         includeFolder;
     private int compilerId = 0;
 
     private MainGui()
@@ -110,6 +114,38 @@ public class MainGui
             {
                 Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (value != null && value.equals("UnsolvedComponent"))
+                {
+                    if (isSelected)
+                    {
+                        comp.setBackground(new Color((HIGHLIGHT_COLOR.getRGB() ^ comp.getBackground().getRGB())));
+                        comp.setForeground(new Color(Color.BLACK.getRGB() ^ comp.getForeground().getRGB()));
+                    }
+                    else
+                    {
+                        comp.setBackground(HIGHLIGHT_COLOR);
+                        comp.setForeground(Color.BLACK);
+                    }
+                }
+                else
+                {
+                    if (!isSelected)
+                    {
+                        comp.setBackground(Color.WHITE);
+                        comp.setForeground(Color.BLACK);
+                    }
+                }
+                return comp;
+            }
+        });
+
+        hexTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer()
+        {
+            private final Color HIGHLIGHT_COLOR = Color.YELLOW;
+
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+            {
+                Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (value != null && value.toString().length() > 2 && column != 0)
                 {
                     if (isSelected)
                     {
@@ -337,20 +373,52 @@ public class MainGui
                     System.gc();
 
                     final Compiler compiler = new Compiler(asmContents.getText());
-                    preText.setText(compiler.preprocessed);
 
-                    constantsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)"}));
-                    constantsTable.repaint();
+                    while (compiler.hasWork())
+                    {
+                        compiler.doWork();
 
-                    componentsTable.setModel(new DefaultTableModel(compiler.getComponents(), new String[]{"Start", "End", "Type", "SubType", "Contents", "Bytes"}));
-                    componentsTable.repaint();
+                        preText.setText(compiler.src);
+                        constantsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)", "Value (String)"}));
+                        resizeColumnWidth(constantsTable);
+                        constantsTable.updateUI();
+
+                        componentsTable.setModel(new DefaultTableModel(compiler.getComponents(), new String[]{"Start", "End", "Type", "SubType", "Contents", "Address", "Bytes"}));
+                        resizeColumnWidth(componentsTable);
+                        componentsTable.updateUI();
+
+                        hexTable.setModel(new DefaultTableModel(compiler.getHexTable(), new String[]{"Address    ", "0x.0", "0x.1", "0x.2", "0x.3", "0x.4", "0x.5", "0x.6", "0x.7", "0x.8", "0x.9", "0x.A", "0x.B", "0x.C", "0x.D", "0x.E", "0x.F"}));
+                        resizeColumnWidth(hexTable);
+                        hexTable.updateUI();
+                    }
                 }
                 catch (Exception e)
                 {
+                    if (e instanceof CompileException)
+                    {
+                        preText.select(((CompileException) e).component.getSrcStart(), ((CompileException) e).component.getSrcEnd());
+                        System.out.println(((CompileException) e).component);
+                    }
                     e.printStackTrace();
                 }
             }
         }, "Compiler-" + compilerId++).start();
+    }
+
+    public void resizeColumnWidth(JTable table)
+    {
+        final TableColumnModel columnModel = table.getColumnModel();
+        for (int column = 0; column < table.getColumnCount(); column++)
+        {
+            int width = 50; // Min width
+            for (int row = 0; row < table.getRowCount(); row++)
+            {
+                TableCellRenderer renderer = table.getCellRenderer(row, column);
+                Component comp = table.prepareRenderer(renderer, row, column);
+                width = Math.max(comp.getPreferredSize().width, width);
+            }
+            columnModel.getColumn(column).setPreferredWidth(width);
+        }
     }
 
     private void createUIComponents()
@@ -510,6 +578,7 @@ public class MainGui
         panel3.add(scrollPane2, gbc);
         componentsTable = new JTable();
         componentsTable.setAutoCreateRowSorter(false);
+        componentsTable.setAutoResizeMode(3);
         scrollPane2.setViewportView(componentsTable);
         final JPanel panel4 = new JPanel();
         panel4.setLayout(new GridBagLayout());
@@ -526,7 +595,23 @@ public class MainGui
         panel4.add(scrollPane3, gbc);
         constantsTable = new JTable();
         constantsTable.setAutoCreateRowSorter(true);
+        constantsTable.setAutoResizeMode(4);
         scrollPane3.setViewportView(constantsTable);
+        final JPanel panel5 = new JPanel();
+        panel5.setLayout(new GridBagLayout());
+        tabPane.addTab("Hex", panel5);
+        final JScrollPane scrollPane4 = new JScrollPane();
+        scrollPane4.setVerticalScrollBarPolicy(22);
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        panel5.add(scrollPane4, gbc);
+        hexTable = new JTable();
+        hexTable.setAutoResizeMode(0);
+        scrollPane4.setViewportView(hexTable);
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 0;

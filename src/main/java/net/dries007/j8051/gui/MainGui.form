@@ -91,6 +91,7 @@
                     <constraints/>
                     <properties>
                       <autoCreateRowSorter value="false"/>
+                      <autoResizeMode value="3"/>
                     </properties>
                   </component>
                 </children>
@@ -118,6 +119,34 @@
                     <constraints/>
                     <properties>
                       <autoCreateRowSorter value="true"/>
+                      <autoResizeMode value="4"/>
+                    </properties>
+                  </component>
+                </children>
+              </scrollpane>
+            </children>
+          </grid>
+          <grid id="e1803" layout-manager="GridBagLayout">
+            <constraints>
+              <tabbedpane title="Hex"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <scrollpane id="f0a8">
+                <constraints>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                  <gridbag weightx="1.0" weighty="1.0"/>
+                </constraints>
+                <properties>
+                  <verticalScrollBarPolicy value="22"/>
+                </properties>
+                <border type="none"/>
+                <children>
+                  <component id="57908" class="javax.swing.JTable" binding="hexTable">
+                    <constraints/>
+                    <properties>
+                      <autoResizeMode value="0"/>
                     </properties>
                   </component>
                 </children>

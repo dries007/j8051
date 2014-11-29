@@ -31,32 +31,28 @@
 
 package net.dries007.j8051.util.exceptions;
 
+import net.dries007.j8051.compiler.components.Component;
+
 /**
  * @author Dries007
  */
 public class CompileException extends Exception
 {
-    public CompileException()
+    public final Component component;
+    public CompileException(Component component)
     {
+        this.component = component;
     }
 
-    public CompileException(String message)
+    public CompileException(Component component, String message)
     {
         super(message);
+        this.component = component;
     }
 
-    public CompileException(String message, Throwable cause)
+    public CompileException(Component component, String message, Throwable cause)
     {
         super(message, cause);
-    }
-
-    public CompileException(Throwable cause)
-    {
-        super(cause);
-    }
-
-    public CompileException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
-    {
-        super(message, cause, enableSuppression, writableStackTrace);
+        this.component = component;
     }
 }

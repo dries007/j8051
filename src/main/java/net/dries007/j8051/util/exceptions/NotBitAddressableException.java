@@ -34,13 +34,13 @@ package net.dries007.j8051.util.exceptions;
 /**
  * @author Dries007
  */
-public class NotBitAdressableException extends NumberFormatException
+public class NotBitAddressableException extends NumberFormatException
 {
-    public NotBitAdressableException()
+    public NotBitAddressableException()
     {
     }
 
-    public NotBitAdressableException(String s)
+    public NotBitAddressableException(String s)
     {
         super(s);
     }

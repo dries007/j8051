@@ -31,32 +31,20 @@
 
 package net.dries007.j8051.util.exceptions;
 
+import net.dries007.j8051.compiler.components.Component;
+
 /**
  * @author Dries007
  */
 public class PreprocessorException extends CompileException
 {
-    public PreprocessorException()
+    public PreprocessorException(Component component)
     {
+        super(component);
     }
 
-    public PreprocessorException(String message)
+    public PreprocessorException(Component component, String message)
     {
-        super(message);
-    }
-
-    public PreprocessorException(String message, Throwable cause)
-    {
-        super(message, cause);
-    }
-
-    public PreprocessorException(Throwable cause)
-    {
-        super(cause);
-    }
-
-    public PreprocessorException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace)
-    {
-        super(message, cause, enableSuppression, writableStackTrace);
+        super(component, message);
     }
 }

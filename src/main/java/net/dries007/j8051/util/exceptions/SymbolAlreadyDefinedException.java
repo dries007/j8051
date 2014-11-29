@@ -31,17 +31,20 @@
 
 package net.dries007.j8051.util.exceptions;
 
+import net.dries007.j8051.compiler.components.Component;
+
 /**
  * @author Dries007
  */
 public class SymbolAlreadyDefinedException extends CompileException
 {
-    public SymbolAlreadyDefinedException()
+    public SymbolAlreadyDefinedException(Component component)
     {
+        super(component);
     }
 
-    public SymbolAlreadyDefinedException(String s)
+    public SymbolAlreadyDefinedException(Component component, String message)
     {
-        super(s);
+        super(component, message);
     }
 }
