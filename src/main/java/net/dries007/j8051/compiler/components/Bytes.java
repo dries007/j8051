@@ -56,12 +56,6 @@ public class Bytes extends Component
         else this.objects = matcher.group(1).split(",\\s*");
     }
 
-    @Override
-    public String toString()
-    {
-        return "BYTES: \t" + type + " \t " + Arrays.toString(objects);
-    }
-
     public static void findBytes(List<Component> components)
     {
         for (Type type : Type.values())
@@ -92,6 +86,12 @@ public class Bytes extends Component
     }
 
     @Override
+    public String toString()
+    {
+        return "BYTES: \t" + type + " \t " + Arrays.toString(objects);
+    }
+
+    @Override
     protected Object getContents()
     {
         return Arrays.toString(objects);
@@ -113,7 +113,8 @@ public class Bytes extends Component
                 return size = objects.length;
             case DW:
                 return size = 2 * objects.length;
-            case DS: return size = IntegerEvaluator.EVALUATOR.evaluate((String) objects[0], symbols);
+            case DS:
+                return size = IntegerEvaluator.EVALUATOR.evaluate((String) objects[0], symbols);
         }
         throw new IllegalStateException("Type unknown: " + type);
     }

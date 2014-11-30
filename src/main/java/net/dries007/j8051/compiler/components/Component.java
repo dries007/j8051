@@ -43,10 +43,10 @@ import java.util.Map;
  */
 public abstract class Component
 {
+    public    int     address;
+    protected int[]   data;
     private int start, end;
-    protected int[] data;
-    private boolean resolved;
-    public int address;
+    private   boolean resolved;
 
     protected Component(int start, int end)
     {

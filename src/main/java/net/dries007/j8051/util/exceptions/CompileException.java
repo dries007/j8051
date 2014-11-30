@@ -39,6 +39,7 @@ import net.dries007.j8051.compiler.components.Component;
 public class CompileException extends Exception
 {
     public final Component component;
+
     public CompileException(Component component)
     {
         this.component = component;
@@ -54,5 +55,11 @@ public class CompileException extends Exception
     {
         super(message, cause);
         this.component = component;
+    }
+
+    public CompileException(String message)
+    {
+        super(message);
+        component = null;
     }
 }

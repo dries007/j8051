@@ -195,7 +195,7 @@ public class Symbol extends Component
             this.removeFromSrc = removeFromSrc;
             this.pattern = pattern;
             this.evaluator = evaluator;
-            this.evaluate  = evaluate;
+            this.evaluate = evaluate;
         }
 
         public boolean removeFromSrc()

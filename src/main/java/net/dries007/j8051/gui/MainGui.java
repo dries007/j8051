@@ -79,11 +79,11 @@ public class MainGui
     private       JTextArea         preText;
     private       JTable            constantsTable;
     private       JTable            componentsTable;
-    private JTable            hexTable;
-    private JCheckBoxMenuItem autoLoad;
-    private JCheckBoxMenuItem autoSave;
-    private JCheckBoxMenuItem autoCompile;
-    private JMenuItem         includeFolder;
+    private       JTable            hexTable;
+    private       JCheckBoxMenuItem autoLoad;
+    private       JCheckBoxMenuItem autoSave;
+    private       JCheckBoxMenuItem autoCompile;
+    private       JMenuItem         includeFolder;
     private int compilerId = 0;
 
     private MainGui()
@@ -397,7 +397,6 @@ public class MainGui
                     if (e instanceof CompileException)
                     {
                         preText.select(((CompileException) e).component.getSrcStart(), ((CompileException) e).component.getSrcEnd());
-                        System.out.println(((CompileException) e).component);
                     }
                     e.printStackTrace();
                 }

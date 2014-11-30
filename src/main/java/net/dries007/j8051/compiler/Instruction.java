@@ -31,11 +31,12 @@
 
 package net.dries007.j8051.compiler;
 
-import net.dries007.j8051.compiler.components.Bytes;
 import net.dries007.j8051.compiler.components.Symbol;
-import net.dries007.j8051.util.Helper;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.EnumMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
@@ -223,7 +224,7 @@ public class Instruction
     public final int        opcode;
     public final int        size;
     public final Argument[] arguments;
-    public final boolean reverseOperands;
+    public final boolean    reverseOperands;
 
     private Instruction(int opcode, int size, boolean reverseOperands, Type type, Argument... arguments)
     {

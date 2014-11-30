@@ -46,14 +46,74 @@ import java.util.regex.Matcher;
 public class InstructionComponent extends Component
 {
     public final Instruction.Type type;
-    public Instruction instruction;
-    private Object[] objects;
+    public       Instruction      instruction;
+    private      Object[]         objects;
 
     private InstructionComponent(int startOffset, Matcher matcher, Instruction.Type type)
     {
         super(matcher.start() + startOffset, matcher.end() + startOffset);
         this.type = type;
         if (Instruction.SIMPLE_INSTRUCTIONS.containsKey(type)) instruction = Instruction.SIMPLE_INSTRUCTIONS.get(type);
+    }
+
+    public static void resolveInstructions(LinkedList<Component> components, HashMap<String, Symbol> symbols) throws CompileException
+    {
+        if (components.isEmpty()) return;
+        ListIterator<Component> i = components.listIterator();
+        Component prev = i.next();
+        while (i.hasNext())
+        {
+            Component current = i.next();
+            if (prev instanceof InstructionComponent && current instanceof SrcComponent)
+            {
+                InstructionComponent instructionComponent = (InstructionComponent) prev;
+                SrcComponent srcComponent = (SrcComponent) current;
+                String[] arguments = srcComponent.contents.split(",\\s*");
+                if (instructionComponent.instruction == null)
+                {
+                    List<Instruction> instructions = instructionComponent.type.getInstructions();
+                    for (Instruction instruction : instructions)
+                    {
+                        if (instructionComponent.matches(symbols, instruction, arguments))
+                        {
+                            i.remove();
+                            prev.setSrcEnd(current.getSrcEnd());
+                            break;
+                        }
+                    }
+                }
+            }
+            prev = current;
+        }
+    }
+
+    public static void findInstructions(List<Component> components)
+    {
+        for (Instruction.Type type : Instruction.Type.values())
+        {
+            ListIterator<Component> i = components.listIterator(components.size());
+            while (i.hasPrevious())
+            {
+                Component component = i.previous();
+                if (component instanceof SrcComponent)
+                {
+                    String src = ((SrcComponent) component).contents;
+
+                    Matcher matcher = type.pattern.matcher(src);
+                    if (!matcher.find()) continue;
+                    i.remove();
+
+                    SrcComponent pre = new SrcComponent(component.getSrcStart(), src.substring(0, matcher.start()));
+                    if (pre.shouldAdd()) i.add(pre);
+
+                    InstructionComponent instructionComponent = new InstructionComponent(pre.getSrcEnd(), matcher, type);
+                    i.add(instructionComponent);
+
+                    SrcComponent post = new SrcComponent(instructionComponent.getSrcEnd(), src.substring(matcher.end()));
+                    if (post.shouldAdd()) i.add(post);
+                }
+            }
+        }
     }
 
     @Override
@@ -95,7 +155,7 @@ public class InstructionComponent extends Component
                 {
                     for (int i = 0; i < argument.bytesAdded; i++)
                     {
-                        data[datai++] = (((Integer) objects[dataj]) >>> ((argument.bytesAdded - 1- i) * 8)) & 0xFF;
+                        data[datai++] = (((Integer) objects[dataj]) >>> ((argument.bytesAdded - 1 - i) * 8)) & 0xFF;
                     }
                 }
                 else if (argument == Instruction.Argument.ADDR11)
@@ -128,37 +188,6 @@ public class InstructionComponent extends Component
             int swap = data[1];
             data[1] = data[2];
             data[2] = swap;
-        }
-    }
-
-    public static void resolveInstructions(LinkedList<Component> components, HashMap<String, Symbol> symbols)throws CompileException
-    {
-        if (components.isEmpty()) return;
-        ListIterator<Component> i = components.listIterator();
-        Component prev = i.next();
-        while (i.hasNext())
-        {
-            Component current = i.next();
-            if (prev instanceof InstructionComponent && current instanceof SrcComponent)
-            {
-                InstructionComponent instructionComponent = (InstructionComponent) prev;
-                SrcComponent srcComponent = (SrcComponent) current;
-                String[] arguments = srcComponent.contents.split(",\\s*");
-                if (instructionComponent.instruction == null)
-                {
-                    List<Instruction> instructions = instructionComponent.type.getInstructions();
-                    for (Instruction instruction : instructions)
-                    {
-                        if (instructionComponent.matches(symbols, instruction, arguments))
-                        {
-                            i.remove();
-                            prev.setSrcEnd(current.getSrcEnd());
-                            break;
-                        }
-                    }
-                }
-            }
-            prev = current;
         }
     }
 
@@ -200,34 +229,5 @@ public class InstructionComponent extends Component
         this.instruction = instruction;
         this.objects = data;
         return true;
-    }
-
-    public static void findInstructions(List<Component> components)
-    {
-        for (Instruction.Type type : Instruction.Type.values())
-        {
-            ListIterator<Component> i = components.listIterator(components.size());
-            while (i.hasPrevious())
-            {
-                Component component = i.previous();
-                if (component instanceof SrcComponent)
-                {
-                    String src = ((SrcComponent) component).contents;
-
-                    Matcher matcher = type.pattern.matcher(src);
-                    if (!matcher.find()) continue;
-                    i.remove();
-
-                    SrcComponent pre = new SrcComponent(component.getSrcStart(), src.substring(0, matcher.start()));
-                    if (pre.shouldAdd()) i.add(pre);
-
-                    InstructionComponent instructionComponent = new InstructionComponent(pre.getSrcEnd(), matcher, type);
-                    i.add(instructionComponent);
-
-                    SrcComponent post = new SrcComponent(instructionComponent.getSrcEnd(), src.substring(matcher.end()));
-                    if (post.shouldAdd()) i.add(post);
-                }
-            }
-        }
     }
 }
