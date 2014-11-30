@@ -350,7 +350,7 @@ public class MainGui
             document.remove(0, document.getLength());
             if (Main.srcFile != null)
             {
-                document.insertString(0, FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, "Cp1252")), null);
+                document.insertString(0, FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, DEFAULT_ENCODING)), null);
                 asmContents.setSelectionStart(selectStart);
                 asmContents.setSelectionEnd(selectEnd);
             }
@@ -500,7 +500,7 @@ public class MainGui
     {
         try
         {
-            FileUtils.writeStringToFile(Main.srcFile, asmContents.getDocument().getText(0, asmContents.getDocument().getLength()), PROPERTIES.getProperty(ENCODING, "Cp1252"));
+            FileUtils.writeStringToFile(Main.srcFile, asmContents.getDocument().getText(0, asmContents.getDocument().getLength()), PROPERTIES.getProperty(ENCODING, DEFAULT_ENCODING));
         }
         catch (IOException | BadLocationException e1)
         {

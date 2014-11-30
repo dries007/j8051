@@ -45,8 +45,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
-import static net.dries007.j8051.util.Constants.ENCODING;
-import static net.dries007.j8051.util.Constants.PROPERTIES;
+import static net.dries007.j8051.util.Constants.*;
 
 /**
  * @author Dries007
@@ -173,7 +172,7 @@ public class Compiler
             lines.add(line.toString());
         }
         lines.add(":00000001FF");
-        FileUtils.writeLines(file, PROPERTIES.getProperty(ENCODING, "Cp1252"), lines);
+        FileUtils.writeLines(file, PROPERTIES.getProperty(ENCODING, DEFAULT_ENCODING), lines);
     }
 
     private static enum Stage

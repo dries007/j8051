@@ -30,7 +30,9 @@
 
 package net.dries007.j8051;
 
+import net.dries007.j8051.compiler.Compiler;
 import net.dries007.j8051.gui.MainGui;
+import org.apache.commons.io.FileUtils;
 
 import javax.swing.*;
 import java.io.File;
@@ -50,6 +52,11 @@ public class Main
     {
         parseArgs(args);
 
+        if (srcFile == null)
+        {
+            if (PROPERTIES.containsKey(SRC_FILE)) Main.setSrcFile(new File(PROPERTIES.getProperty(SRC_FILE)));
+        }
+
         if (enablegui)
         {
             try
@@ -64,12 +71,17 @@ public class Main
         }
         else
         {
-            System.out.println("+----------------------------------+");
-            System.out.println("| Press any key to end the program |");
-            System.out.println("+----------------------------------+");
+            if (Main.srcFile == null || !Main.srcFile.exists())
+            {
+                System.out.println("No source file give. Set via argument 'file'.");
+                System.exit(1);
+            }
+            System.out.println(" -=- File used -=- ");
+            System.out.println(Main.srcFile.getAbsolutePath());
+            Compiler compiler = new Compiler(FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, DEFAULT_ENCODING)));
+            while (compiler.hasWork()) compiler.doWork();
+            System.out.println(" -=- Done -=- ");
         }
-
-        if (!enablegui) System.in.read();
     }
 
     private static void parseArgs(String[] args)
@@ -97,6 +109,7 @@ public class Main
         if (!srcFile.exists()) srcFile = null;
         Main.srcFile = srcFile;
         PROPERTIES.setProperty(SRC_FILE, srcFile == null ? "" : srcFile.getAbsolutePath());
+        if (includeFile == null) includeFile = Main.srcFile.getParentFile();
     }
 
     public static void setIncludeFolder(File includeFile)

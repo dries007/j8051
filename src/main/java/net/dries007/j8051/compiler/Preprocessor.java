@@ -181,7 +181,7 @@ public class Preprocessor
 
     private static void include(ListIterator<String> i, File file) throws IncludeException, IOException
     {
-        for (String line : FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, "Cp1252")).split("[\\r\\n]+"))
+        for (String line : FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, DEFAULT_ENCODING)).split("[\\r\\n]+"))
         {
             int comment = line.indexOf(PREFIX_COMMENT);
             line = (comment == -1 ? line : line.substring(0, comment)).replaceAll("^\\s+|\\s+$", "");
