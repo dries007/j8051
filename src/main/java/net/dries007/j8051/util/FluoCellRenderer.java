@@ -29,71 +29,45 @@
  *
  */
 
-package net.dries007.j8051.compiler.components;
+package net.dries007.j8051.util;
 
-import net.dries007.j8051.util.Helper;
-import net.dries007.j8051.util.exceptions.CompileException;
-import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
-
-import java.util.HashMap;
-import java.util.Map;
+import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import java.awt.*;
 
 /**
  * @author Dries007
  */
-public abstract class Component
+public abstract class FluoCellRenderer extends DefaultTableCellRenderer
 {
-    public    int   address;
-    protected int[] data;
-    private   int   start, end;
-    private boolean resolved;
+    private final Color HIGHLIGHT_COLOR = Color.YELLOW;
 
-    protected Component(int start, int end)
+    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
     {
-        this.start = start;
-        this.end = end;
+        Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+        if (value != null && highlight(table, value, isSelected, hasFocus, row, column))
+        {
+            if (isSelected)
+            {
+                comp.setBackground(new Color((HIGHLIGHT_COLOR.getRGB() ^ comp.getBackground().getRGB())));
+                comp.setForeground(new Color(Color.BLACK.getRGB() ^ comp.getForeground().getRGB()));
+            }
+            else
+            {
+                comp.setBackground(HIGHLIGHT_COLOR);
+                comp.setForeground(Color.BLACK);
+            }
+        }
+        else
+        {
+            if (!isSelected)
+            {
+                comp.setBackground(Color.WHITE);
+                comp.setForeground(Color.BLACK);
+            }
+        }
+        return comp;
     }
 
-    public int getSrcStart()
-    {
-        return start;
-    }
-
-    public int getSrcEnd()
-    {
-        return end;
-    }
-
-    public Object[] getDebug()
-    {
-        return new Object[]{getSrcStart(), getSrcEnd(), this.getClass().getSimpleName().replace("Component", ""), getSubType(), getContents(), String.format("0x%04X", address), Helper.toHexString(getData())};
-    }
-
-    protected abstract Object getContents();
-
-    protected abstract Object getSubType();
-
-    public void setSrcEnd(int end)
-    {
-        this.end = end;
-    }
-
-    public abstract Integer getSize(Map<String, Symbol> symbols);
-
-    public boolean isResolved()
-    {
-        return resolved;
-    }
-
-    public int[] getData()
-    {
-        return data;
-    }
-
-    public abstract void tryResolve(int currentLocation, HashMap<String, Symbol> symbols) throws SymbolUndefinedException, CompileException;
-
-    public void setResolved(boolean resolved)
-    {
-        this.resolved = resolved;
-    }
+    public abstract boolean highlight(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column);
 }

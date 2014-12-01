@@ -32,15 +32,18 @@ package net.dries007.j8051.gui;
 
 import net.dries007.j8051.Main;
 import net.dries007.j8051.compiler.Compiler;
-import net.dries007.j8051.util.FileWatcher;
+import net.dries007.j8051.util.AsmDocumentListener;
+import net.dries007.j8051.util.FluoCellRenderer;
+import net.dries007.j8051.util.Helper;
 import net.dries007.j8051.util.JFontChooser;
 import net.dries007.j8051.util.exceptions.CompileException;
 import org.apache.commons.io.FileUtils;
+import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumnModel;
@@ -53,6 +56,7 @@ import java.io.IOException;
 
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
+import static javax.swing.JFileChooser.DIRECTORIES_ONLY;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 import static net.dries007.j8051.util.AsmDocumentListener.DOCUMENT_LISTENER;
 import static net.dries007.j8051.util.Constants.*;
@@ -62,37 +66,43 @@ import static net.dries007.j8051.util.Constants.*;
  */
 public class MainGui
 {
-    public static final MainGui MAIN_GUI = new MainGui();
-    private static FileWatcher fileWatcher;
-    public final JFileChooser fileChooser   = new JFileChooser();
-    public final JFileChooser folderChooser = new JFileChooser();
-    public final JFontChooser fontChooser   = new JFontChooser();
-    private final JFrame            frame;
-    private       JTabbedPane       tabPane;
-    private       JMenuItem         loadFile;
-    private       JMenuItem         saveFile;
-    private       JMenuItem         changeFont;
-    private       JMenuItem         changeTabSize;
-    private       JPanel            root;
-    private       JMenuBar          menuBar;
-    private       RSyntaxTextArea   asmContents;
-    private       JTextArea         preText;
-    private       JTable            constantsTable;
-    private       JTable            componentsTable;
-    private       JTable            hexTable;
-    private       JCheckBoxMenuItem autoLoad;
-    private       JCheckBoxMenuItem autoSave;
-    private       JCheckBoxMenuItem autoCompile;
-    private       JMenuItem         includeFolder;
-    private int compilerId = 0;
+    public static final MainGui      MAIN_GUI      = new MainGui();
+    //private static FileWatcher fileWatcher;
+    public final        JFileChooser fileChooser   = new JFileChooser();
+    public final        JFileChooser folderChooser = new JFileChooser();
+    public final        JFontChooser fontChooser   = new JFontChooser();
+    private final JFrame               frame;
+    private       JTabbedPane          tabPane;
+    private       JMenuItem            loadFile;
+    private       JMenuItem            saveFile;
+    private       JMenuItem            changeFont;
+    private       JMenuItem            changeTabSize;
+    private       JMenuItem            compile;
+    private       JPanel               root;
+    private       JMenuBar             menuBar;
+    private       RSyntaxTextArea      asmContents;
+    private RSyntaxTextArea      preText;
+    private JTable               symbolsTable;
+    private JTable               componentsTable;
+    private JTable               hexTable;
+    private JTabbedPane          includeFiles;
+    public  JLabel               status;
+    //private       JCheckBoxMenuItem autoLoad;
+    private JCheckBoxMenuItem    autoSave;
+    private JCheckBoxMenuItem    autoCompile;
+    private JMenuItem            includeFolder;
+    private JRadioButtonMenuItem encodingDefault;
+    private JRadioButtonMenuItem encodingUtf8;
+    private JRadioButtonMenuItem encodingAnsi;
 
     private MainGui()
     {
         $$$setupUI$$$();
+        AbstractTokenMakerFactory atmf = (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
+        atmf.putMapping("text/8051", AsmTokenMaker.class.getName());
 
-//        AbstractTokenMakerFactory atmf = (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
-//        atmf.putMapping("text/8051", AsmTokenMaker.class.getName());
-//        asmContents.setSyntaxEditingStyle("text/8051");
+        asmContents.setSyntaxEditingStyle("text/8051");
+        preText.setSyntaxEditingStyle("text/8051");
 
         fontChooser.setSelectedFontFamily(PROPERTIES.getProperty(FONT_NAME, "Courier New"));
         fontChooser.setSelectedFontStyle(Integer.parseInt(PROPERTIES.getProperty(FONT_STYLE, Integer.toString(Font.PLAIN))));
@@ -105,68 +115,28 @@ public class MainGui
         preText.setFont(fontChooser.getSelectedFont());
 
         // DEBUG todo
-
-        componentsTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer()
+        componentsTable.setDefaultRenderer(Object.class, new FluoCellRenderer()
         {
-            private final Color HIGHLIGHT_COLOR = Color.YELLOW;
-
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+            @Override
+            public boolean highlight(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
             {
-                Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (value != null && value.equals("UnsolvedComponent"))
-                {
-                    if (isSelected)
-                    {
-                        comp.setBackground(new Color((HIGHLIGHT_COLOR.getRGB() ^ comp.getBackground().getRGB())));
-                        comp.setForeground(new Color(Color.BLACK.getRGB() ^ comp.getForeground().getRGB()));
-                    }
-                    else
-                    {
-                        comp.setBackground(HIGHLIGHT_COLOR);
-                        comp.setForeground(Color.BLACK);
-                    }
-                }
-                else
-                {
-                    if (!isSelected)
-                    {
-                        comp.setBackground(Color.WHITE);
-                        comp.setForeground(Color.BLACK);
-                    }
-                }
-                return comp;
+                return value.equals("UnsolvedComponent");
             }
         });
-
-        hexTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer()
+        hexTable.setDefaultRenderer(Object.class, new FluoCellRenderer()
         {
-            private final Color HIGHLIGHT_COLOR = Color.YELLOW;
-
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+            @Override
+            public boolean highlight(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
             {
-                Component comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (value != null && value.toString().length() > 2 && column != 0)
-                {
-                    if (isSelected)
-                    {
-                        comp.setBackground(new Color((HIGHLIGHT_COLOR.getRGB() ^ comp.getBackground().getRGB())));
-                        comp.setForeground(new Color(Color.BLACK.getRGB() ^ comp.getForeground().getRGB()));
-                    }
-                    else
-                    {
-                        comp.setBackground(HIGHLIGHT_COLOR);
-                        comp.setForeground(Color.BLACK);
-                    }
-                }
-                else
-                {
-                    if (!isSelected)
-                    {
-                        comp.setBackground(Color.WHITE);
-                        comp.setForeground(Color.BLACK);
-                    }
-                }
-                return comp;
+                return value.toString().length() > 2 && column != 0;
+            }
+        });
+        symbolsTable.setDefaultRenderer(Object.class, new FluoCellRenderer()
+        {
+            @Override
+            public boolean highlight(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+            {
+                return value.toString().equals("_UNDEFINED_");
             }
         });
 
@@ -212,7 +182,7 @@ public class MainGui
             public void windowClosed(WindowEvent e)
             {
                 super.windowClosed(e);
-                fileWatcher.interrupt();
+                //fileWatcher.interrupt();
             }
         });
         loadFile.addActionListener(new ActionListener()
@@ -226,6 +196,21 @@ public class MainGui
                     Main.setSrcFile(file);
                     changeFile();
                 }
+            }
+        });
+        compile.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                EventQueue.invokeLater(new Runnable()
+                {
+                    @Override
+                    public void run()
+                    {
+                        MAIN_GUI.compile();
+                    }
+                });
             }
         });
         saveFile.addActionListener(new ActionListener()
@@ -250,20 +235,20 @@ public class MainGui
                 }
             }
         });
-        autoLoad.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                PROPERTIES.setProperty(AUTO_LOAD, Boolean.toString(autoLoad.getState()));
-            }
-        });
+//        autoLoad.addActionListener(new ActionListener()
+//        {
+//            @Override
+//            public void actionPerformed(ActionEvent e)
+//            {
+//                PROPERTIES.setProperty(AUTO_LOAD, Boolean.toString(autoLoad.getState()));
+//            }
+//        });
         autoCompile.addActionListener(new ActionListener()
         {
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                PROPERTIES.setProperty(AUTO_COMPILE, Boolean.toString(autoLoad.getState()));
+                PROPERTIES.setProperty(AUTO_COMPILE, Boolean.toString(autoCompile.getState()));
             }
         });
         autoSave.addActionListener(new ActionListener()
@@ -302,13 +287,39 @@ public class MainGui
                 }
             }
         });
+        encodingDefault.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                PROPERTIES.setProperty(ENCODING, ENCODING_DEFAULT);
+                changeFile();
+            }
+        });
+        encodingAnsi.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                PROPERTIES.setProperty(ENCODING, ENCODING_ANSI);
+                changeFile();
+            }
+        });
+        encodingUtf8.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                PROPERTIES.setProperty(ENCODING, ENCODING_UTF8);
+                changeFile();
+            }
+        });
     }
 
     public void init()
     {
         changeFile();
         compile();
-        DOCUMENT_LISTENER.start();
         asmContents.getDocument().addDocumentListener(DOCUMENT_LISTENER);
 
         if (PROPERTIES.containsKey(SRC_FILE))
@@ -320,22 +331,23 @@ public class MainGui
 
     public void changeFile()
     {
-        if (fileWatcher != null)
-        {
-            fileWatcher.interrupt();
-        }
+//        if (fileWatcher != null)
+//        {
+//            fileWatcher.interrupt();
+//            fileWatcher = null;
+//        }
         if (Main.srcFile != null)
         {
             frame.setTitle(String.format("j8051 - %s", Main.srcFile.getAbsolutePath()));
-            try
-            {
-                fileWatcher = new FileWatcher(Main.srcFile);
-                fileWatcher.start();
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
+//            try
+//            {
+//                fileWatcher = new FileWatcher(Main.srcFile);
+//                fileWatcher.start();
+//            }
+//            catch (IOException e)
+//            {
+//                e.printStackTrace();
+//            }
         }
         asmContents.setEditable(Main.srcFile != null);
         setAsmContents();
@@ -343,65 +355,88 @@ public class MainGui
 
     public void setAsmContents()
     {
+        AsmDocumentListener.DOCUMENT_LISTENER.active = false;
         Document document = asmContents.getDocument();
         try
         {
-            int selectStart = asmContents.getSelectionStart(), selectEnd = asmContents.getSelectionEnd();
             document.remove(0, document.getLength());
             if (Main.srcFile != null)
             {
-                document.insertString(0, FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, DEFAULT_ENCODING)), null);
-                asmContents.setSelectionStart(selectStart);
-                asmContents.setSelectionEnd(selectEnd);
+                document.insertString(0, FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT)), null);
             }
         }
         catch (BadLocationException | IOException e1)
         {
             e1.printStackTrace();
         }
+        AsmDocumentListener.DOCUMENT_LISTENER.active = true;
     }
 
     public void compile()
     {
-        new Thread(new Runnable()
+        try
         {
-            @Override
-            public void run()
+            status.setText("Compiling...");
+            System.gc();
+
+            final Compiler compiler = new Compiler(asmContents.getText());
+
+            while (compiler.hasWork())
             {
-                try
+                compiler.doWork();
+                status.setText(Helper.capitalize(compiler.getStage().name()));
+                switch (compiler.getStage())
                 {
-                    System.gc();
-
-                    final Compiler compiler = new Compiler(asmContents.getText());
-
-                    while (compiler.hasWork())
-                    {
-                        compiler.doWork();
-
+                    case PREPROCESSOR:
                         preText.setText(compiler.src);
-                        constantsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)", "Value (String)"}));
-                        resizeColumnWidth(constantsTable);
-                        constantsTable.updateUI();
+                        for (int i = 0; i < includeFiles.getTabCount(); i++) includeFiles.remove(i);
+                        for (String file : compiler.includeFiles.keySet())
+                        {
+                            GridBagConstraints gbc = new GridBagConstraints();
+                            gbc.gridx = 0;
+                            gbc.gridy = 0;
+                            gbc.weightx = 1.0;
+                            gbc.weighty = 1.0;
+                            gbc.fill = GridBagConstraints.BOTH;
+                            RTextScrollPane rTextScrollPane1 = new RTextScrollPane();
+                            rTextScrollPane1.setName(file);
+                            rTextScrollPane1.setBorder(BorderFactory.createTitledBorder("Source"));
+                            RSyntaxTextArea text = new RSyntaxTextArea(compiler.includeFiles.get(file));
+                            text.setFadeCurrentLineHighlight(false);
+                            text.setTabsEmulated(false);
+                            text.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
+                            text.setFont(fontChooser.getSelectedFont());
+                            text.setSyntaxEditingStyle("text/8051");
+                            rTextScrollPane1.setViewportView(text);
+                            includeFiles.add(rTextScrollPane1, gbc);
+                        }
+                        break;
+                    case MAKE_HEX:
+                        hexTable.setModel(new DefaultTableModel(compiler.getHexTable(), new String[]{"Address    ", "0x.0", "0x.1", "0x.2", "0x.3", "0x.4", "0x.5", "0x.6", "0x.7", "0x.8", "0x.9", "0x.A", "0x.B", "0x.C", "0x.D", "0x.E", "0x.F"}));
+                        resizeColumnWidth(hexTable);
+                        hexTable.updateUI();
+                        break;
+                    default:
+                        symbolsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)", "Value (String)"}));
+                        resizeColumnWidth(symbolsTable);
+                        symbolsTable.updateUI();
 
                         componentsTable.setModel(new DefaultTableModel(compiler.getComponents(), new String[]{"Start", "End", "Type", "SubType", "Contents", "Address", "Bytes"}));
                         resizeColumnWidth(componentsTable);
                         componentsTable.updateUI();
-
-                        hexTable.setModel(new DefaultTableModel(compiler.getHexTable(), new String[]{"Address    ", "0x.0", "0x.1", "0x.2", "0x.3", "0x.4", "0x.5", "0x.6", "0x.7", "0x.8", "0x.9", "0x.A", "0x.B", "0x.C", "0x.D", "0x.E", "0x.F"}));
-                        resizeColumnWidth(hexTable);
-                        hexTable.updateUI();
-                    }
-                }
-                catch (Exception e)
-                {
-                    if (e instanceof CompileException)
-                    {
-                        preText.select(((CompileException) e).component.getSrcStart(), ((CompileException) e).component.getSrcEnd());
-                    }
-                    e.printStackTrace();
+                        break;
                 }
             }
-        }, "Compiler-" + compilerId++).start();
+        }
+        catch (Exception e)
+        {
+            if (e instanceof CompileException)
+            {
+                preText.select(((CompileException) e).component.getSrcStart(), ((CompileException) e).component.getSrcEnd());
+            }
+            e.printStackTrace();
+            status.setText(e.getClass().getSimpleName() + ": " + e.getMessage());
+        }
     }
 
     public void resizeColumnWidth(JTable table)
@@ -432,7 +467,7 @@ public class MainGui
         folderChooser.addChoosableFileFilter(FOLDER_FILTER);
         folderChooser.setFileHidingEnabled(true);
         folderChooser.setMultiSelectionEnabled(false);
-        folderChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        folderChooser.setFileSelectionMode(DIRECTORIES_ONLY);
         folderChooser.setFileFilter(FOLDER_FILTER);
 
         //Menubar
@@ -448,17 +483,33 @@ public class MainGui
 
         fileMenu.addSeparator();
 
-        autoLoad = new JCheckBoxMenuItem("Auto load changes from disk");
-        autoLoad.setState(parseBoolean(PROPERTIES.getProperty(AUTO_LOAD, "true")));
-        fileMenu.add(autoLoad);
+        compile = new JMenuItem("Compile");
+        fileMenu.add(compile);
 
-        autoSave = new JCheckBoxMenuItem("Auto save");
-        autoSave.setState(parseBoolean(PROPERTIES.getProperty(AUTO_SAVE, "true")));
-        fileMenu.add(autoSave);
+        // Encoding menu, under file menu
+        JMenu encoding = new JMenu("Encoding");
+        fileMenu.add(encoding);
 
-        autoCompile = new JCheckBoxMenuItem("Auto compile");
-        autoCompile.setState(parseBoolean(PROPERTIES.getProperty(AUTO_COMPILE, "true")));
-        fileMenu.add(autoCompile);
+        ButtonGroup buttonGroup = new ButtonGroup();
+
+        encodingDefault = new JRadioButtonMenuItem("Platform/Java default");
+        if (String.valueOf(PROPERTIES.getProperty(ENCODING)).equals(ENCODING_DEFAULT)) encodingDefault.setSelected(true);
+        buttonGroup.add(encodingDefault);
+        encoding.add(encodingDefault);
+
+        encodingUtf8 = new JRadioButtonMenuItem("UTF-8");
+        if (String.valueOf(PROPERTIES.getProperty(ENCODING)).equals(ENCODING_UTF8)) encodingUtf8.setSelected(true);
+        buttonGroup.add(encodingUtf8);
+        encoding.add(encodingUtf8);
+
+        encodingAnsi = new JRadioButtonMenuItem("ANSI");
+        if (String.valueOf(PROPERTIES.getProperty(ENCODING)).equals(ENCODING_ANSI)) encodingAnsi.setSelected(true);
+        buttonGroup.add(encodingAnsi);
+        encoding.add(encodingAnsi);
+
+//        autoLoad = new JCheckBoxMenuItem("Auto load changes from disk");
+//        autoLoad.setState(parseBoolean(PROPERTIES.getProperty(AUTO_LOAD, "true")));
+//        fileMenu.add(autoLoad);
 
         menuBar.add(fileMenu);
         //  Viewmenu
@@ -475,16 +526,26 @@ public class MainGui
         //  optionsmenu
         JMenu optionsMenu = new JMenu("Options");
 
-        includeFolder = new JMenuItem("Include folder");
+        includeFolder = new JMenuItem("Include folder...");
         optionsMenu.add(includeFolder);
+
+        optionsMenu.addSeparator();
+
+        autoSave = new JCheckBoxMenuItem("Auto save");
+        autoSave.setState(parseBoolean(PROPERTIES.getProperty(AUTO_SAVE, "true")));
+        optionsMenu.add(autoSave);
+
+        autoCompile = new JCheckBoxMenuItem("Auto compile");
+        autoCompile.setState(parseBoolean(PROPERTIES.getProperty(AUTO_COMPILE, "true")));
+        optionsMenu.add(autoCompile);
 
         menuBar.add(optionsMenu);
     }
 
-    public boolean isAutoUpdating()
-    {
-        return autoLoad.getState();
-    }
+//    public boolean isAutoUpdating()
+//    {
+//        return autoLoad.getState();
+//    }
 
     public boolean isAutoCompiling()
     {
@@ -500,7 +561,7 @@ public class MainGui
     {
         try
         {
-            FileUtils.writeStringToFile(Main.srcFile, asmContents.getDocument().getText(0, asmContents.getDocument().getLength()), PROPERTIES.getProperty(ENCODING, DEFAULT_ENCODING));
+            FileUtils.writeStringToFile(Main.srcFile, asmContents.getDocument().getText(0, asmContents.getDocument().getLength()), PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT));
         }
         catch (IOException | BadLocationException e1)
         {
@@ -532,7 +593,7 @@ public class MainGui
         root.add(tabPane, gbc);
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new GridBagLayout());
-        tabPane.addTab("ASM file", panel1);
+        tabPane.addTab("ASM files", panel1);
         final RTextScrollPane rTextScrollPane1 = new RTextScrollPane();
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -549,7 +610,33 @@ public class MainGui
         rTextScrollPane1.setViewportView(asmContents);
         final JPanel panel2 = new JPanel();
         panel2.setLayout(new GridBagLayout());
-        tabPane.addTab("Pre-processed", panel2);
+        tabPane.addTab("Include Files", panel2);
+        includeFiles = new JTabbedPane();
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        panel2.add(includeFiles, gbc);
+        final JPanel panel3 = new JPanel();
+        panel3.setLayout(new GridBagLayout());
+        tabPane.addTab("Pre-processed", panel3);
+        final RTextScrollPane rTextScrollPane2 = new RTextScrollPane();
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        panel3.add(rTextScrollPane2, gbc);
+        preText = new RSyntaxTextArea();
+        preText.setEditable(false);
+        preText.setEnabled(true);
+        rTextScrollPane2.setViewportView(preText);
+        final JPanel panel4 = new JPanel();
+        panel4.setLayout(new GridBagLayout());
+        tabPane.addTab("Components", panel4);
         final JScrollPane scrollPane1 = new JScrollPane();
         scrollPane1.setVerticalScrollBarPolicy(22);
         gbc = new GridBagConstraints();
@@ -558,14 +645,14 @@ public class MainGui
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
-        panel2.add(scrollPane1, gbc);
-        preText = new JTextArea();
-        preText.setEditable(false);
-        preText.setEnabled(true);
-        scrollPane1.setViewportView(preText);
-        final JPanel panel3 = new JPanel();
-        panel3.setLayout(new GridBagLayout());
-        tabPane.addTab("Components", panel3);
+        panel4.add(scrollPane1, gbc);
+        componentsTable = new JTable();
+        componentsTable.setAutoCreateRowSorter(false);
+        componentsTable.setAutoResizeMode(3);
+        scrollPane1.setViewportView(componentsTable);
+        final JPanel panel5 = new JPanel();
+        panel5.setLayout(new GridBagLayout());
+        tabPane.addTab("Symbols", panel5);
         final JScrollPane scrollPane2 = new JScrollPane();
         scrollPane2.setVerticalScrollBarPolicy(22);
         gbc = new GridBagConstraints();
@@ -574,15 +661,14 @@ public class MainGui
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
-        panel3.add(scrollPane2, gbc);
-        componentsTable = new JTable();
-        componentsTable.setAutoCreateRowSorter(false);
-        componentsTable.setAutoResizeMode(3);
-        scrollPane2.setViewportView(componentsTable);
-        final JPanel panel4 = new JPanel();
-        panel4.setLayout(new GridBagLayout());
-        tabPane.addTab("Symbols", panel4);
-        panel4.setBorder(BorderFactory.createTitledBorder("Symbols"));
+        panel5.add(scrollPane2, gbc);
+        symbolsTable = new JTable();
+        symbolsTable.setAutoCreateRowSorter(true);
+        symbolsTable.setAutoResizeMode(4);
+        scrollPane2.setViewportView(symbolsTable);
+        final JPanel panel6 = new JPanel();
+        panel6.setLayout(new GridBagLayout());
+        tabPane.addTab("Hex", panel6);
         final JScrollPane scrollPane3 = new JScrollPane();
         scrollPane3.setVerticalScrollBarPolicy(22);
         gbc = new GridBagConstraints();
@@ -591,30 +677,30 @@ public class MainGui
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
-        panel4.add(scrollPane3, gbc);
-        constantsTable = new JTable();
-        constantsTable.setAutoCreateRowSorter(true);
-        constantsTable.setAutoResizeMode(4);
-        scrollPane3.setViewportView(constantsTable);
-        final JPanel panel5 = new JPanel();
-        panel5.setLayout(new GridBagLayout());
-        tabPane.addTab("Hex", panel5);
-        final JScrollPane scrollPane4 = new JScrollPane();
-        scrollPane4.setVerticalScrollBarPolicy(22);
-        gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.weightx = 1.0;
-        gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.BOTH;
-        panel5.add(scrollPane4, gbc);
+        panel6.add(scrollPane3, gbc);
         hexTable = new JTable();
         hexTable.setAutoResizeMode(0);
-        scrollPane4.setViewportView(hexTable);
+        scrollPane3.setViewportView(hexTable);
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 0;
         root.add(menuBar, gbc);
+        final JLabel label1 = new JLabel();
+        label1.setText("Status:");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.ipadx = 10;
+        gbc.insets = new Insets(2, 10, 2, 0);
+        root.add(label1, gbc);
+        status = new JLabel();
+        status.setText("Label");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 1;
+        gbc.gridy = 2;
+        gbc.anchor = GridBagConstraints.WEST;
+        root.add(status, gbc);
     }
 
     /**

@@ -77,19 +77,20 @@ public class IntegerEvaluator extends AbstractEvaluator<Integer>
     public static final Operator DIVIDE   = new Operator("/", 2, Operator.Associativity.LEFT, 10);
     public static final Operator MODULO   = new Operator("%", 2, Operator.Associativity.LEFT, 10);
 
-    public static final Operator LOGICAL_NOT = new Operator("!", 1, Operator.Associativity.RIGHT, 11);
-    public static final Operator NEGATE      = new Operator("-", 1, Operator.Associativity.RIGHT, 11);
-    public static final Operator COMPLEMENT  = new Operator("~", 1, Operator.Associativity.RIGHT, 11);
-    public static final List<Operator> OPERATORS = Arrays.asList(LOGICAL_OR, LOGICAL_AND, BITWISE_OR, BITWISE_XOR, BITWISE_AND, EQUAL, NOT_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, SHIFT_LEFT, SHIFT_RIGHT, MINUS, PLUS, MULTIPLY, DIVIDE, MODULO, LOGICAL_NOT, NEGATE, COMPLEMENT);
+    public static final Operator       LOGICAL_NOT = new Operator("!", 1, Operator.Associativity.RIGHT, 11);
+    public static final Operator       NEGATE      = new Operator("-", 1, Operator.Associativity.RIGHT, 11);
+    public static final Operator       COMPLEMENT  = new Operator("~", 1, Operator.Associativity.RIGHT, 11);
+    public static final List<Operator> OPERATORS   = Arrays.asList(LOGICAL_OR, LOGICAL_AND, BITWISE_OR, BITWISE_XOR, BITWISE_AND, EQUAL, NOT_EQUAL, LESS_THAN, LESS_THAN_OR_EQUAL, GREATER_THAN, GREATER_THAN_OR_EQUAL, SHIFT_LEFT, SHIFT_RIGHT, MINUS, PLUS, MULTIPLY, DIVIDE, MODULO, LOGICAL_NOT, NEGATE, COMPLEMENT);
     // Used for bit assignments
-    public static final Operator DOT = new Operator(".", 2, Operator.Associativity.LEFT, 12);
-    public static final Function LOW  = new Function("low", 1);
-    public static final Function HIGH = new Function("high", 1);
+    public static final Operator       DOT         = new Operator(".", 2, Operator.Associativity.LEFT, 12);
+    public static final Function       LOW         = new Function("low", 1);
+    public static final Function       HIGH        = new Function("high", 1);
 
     public static final List<Function> FUNCTIONS = Arrays.asList(LOW, HIGH);
 
     private static final Parameters PARAMETERS;
     private static final Parameters PARAMETERS_BITS;
+
     static
     {
         // Create the evaluator's parameters

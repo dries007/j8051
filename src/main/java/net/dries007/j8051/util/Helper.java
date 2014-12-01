@@ -79,4 +79,15 @@ public class Helper
         }
         throw new NotBitAddressableException(String.format("Bit Not Addressable: 0x%02X.%d", regiser, bit));
     }
+
+    public static String capitalize(String name)
+    {
+        if (name.length() == 0) return name;
+        return Character.toUpperCase(name.charAt(0)) + name.substring(1).toLowerCase();
+    }
+
+    public static boolean isNumberAppendix(char c)
+    {
+        return c == 'h' || c == 'H' || c == 'b' || c == 'B' || c == 'o' || c == 'O';
+    }
 }

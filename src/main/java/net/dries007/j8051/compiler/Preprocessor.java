@@ -35,6 +35,7 @@ import net.dries007.j8051.Main;
 import net.dries007.j8051.util.exceptions.IncludeException;
 import net.dries007.j8051.util.exceptions.PreprocessorException;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,7 +58,7 @@ public class Preprocessor
     {
     }
 
-    public static String process(String srcText) throws PreprocessorException, IOException
+    public static String process(String srcText, HashMap<String, String> includeFiles) throws PreprocessorException, IOException
     {
         Matcher matcher;
         LinkedList<String> lines = new LinkedList<>();
@@ -83,14 +84,14 @@ public class Preprocessor
                 if (matcher.matches())
                 {
                     i.remove();
-                    include(i, new File(matcher.group(1)));
+                    include(i, new File(matcher.group(1)), includeFiles);
                     continue;
                 }
                 matcher = INCLUDE_R.matcher(src);
                 if (matcher.matches())
                 {
                     i.remove();
-                    include(i, new File(Main.includeFile, matcher.group(1)));
+                    include(i, new File(Main.includeFile, matcher.group(1)), includeFiles);
                     continue;
                 }
             }
@@ -179,9 +180,11 @@ public class Preprocessor
         return src;
     }
 
-    private static void include(ListIterator<String> i, File file) throws IncludeException, IOException
+    private static void include(ListIterator<String> i, File file, HashMap<String, String> includeFiles) throws IncludeException, IOException
     {
-        for (String line : FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, DEFAULT_ENCODING)).split("[\\r\\n]+"))
+        String text = FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT));
+        includeFiles.put(FilenameUtils.getBaseName(file.getName()), text);
+        for (String line : text.split("[\\r\\n]+"))
         {
             int comment = line.indexOf(PREFIX_COMMENT);
             line = (comment == -1 ? line : line.substring(0, comment)).replaceAll("^\\s+|\\s+$", "");

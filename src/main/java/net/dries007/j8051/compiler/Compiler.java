@@ -55,9 +55,10 @@ public class Compiler
     public final Symbol                  currentLocation = new Symbol();
     public final LinkedList<Component>   components      = new LinkedList<>();
     public final HashMap<String, Symbol> symbols         = new HashMap<>();
+    public final HashMap<String, String> includeFiles    = new HashMap<>();
     public String src;
-    public Integer[] hex = new Integer[0];
-    private Stage stage = Stage.PREPROCESSOR;
+    public  Integer[] hex   = new Integer[0];
+    private Stage     stage = Stage.INIT;
 
     public Compiler(String src)
     {
@@ -71,8 +72,8 @@ public class Compiler
 
     public void doWork() throws Exception
     {
-        stage.work(this);
         stage = stage.nextStep;
+        stage.work(this);
     }
 
     private boolean resolveAll() throws CompileException
@@ -126,6 +127,7 @@ public class Compiler
         ArrayList<Object[]> data = new ArrayList<>(symbols.size());
         for (Symbol symbol : symbols.values())
         {
+            if (getStage() == Stage.DONE && symbol == currentLocation) continue;
             data.add(new Object[]{symbol.key, symbol.type, symbol.isDefined() ? String.format("0x%04X", symbol.intValue) : "_UNDEFINED_", symbol.isDefined() ? String.format("%04d", symbol.intValue) : "_UNDEFINED_", symbol.stringValue});
         }
         return data.toArray(new Object[data.size()][]);
@@ -141,10 +143,8 @@ public class Compiler
             for (int j = 0; j < 16; j++)
             {
                 if (hex.length == (i * 16) + j) break;
-                //System.out.print(String.format("%02X ", hex[(i * 16) + j]));
                 line[1 + j] = String.format("%02X", hex[(i * 16) + j]);
             }
-            //System.out.println();
             data.add(line);
         }
         return data.toArray(new String[data.size()][]);
@@ -153,7 +153,7 @@ public class Compiler
     private void makeHexFile() throws IOException, CompileException
     {
         File file = new File(Main.srcFile.getParentFile(), FilenameUtils.getBaseName(Main.srcFile.getName()) + ".hex");
-        //if (file.exists()) file.delete();
+        if (file.exists()) file.delete();
         LinkedList<String> lines = new LinkedList<>();
         for (int i = 0; i <= hex.length / 0x20; i++)
         {
@@ -172,10 +172,15 @@ public class Compiler
             lines.add(line.toString());
         }
         lines.add(":00000001FF");
-        FileUtils.writeLines(file, PROPERTIES.getProperty(ENCODING, DEFAULT_ENCODING), lines);
+        FileUtils.writeLines(file, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT), lines);
     }
 
-    private static enum Stage
+    public Stage getStage()
+    {
+        return stage;
+    }
+
+    public static enum Stage
     {
         DONE(null)
                 {
@@ -250,9 +255,17 @@ public class Compiler
                     @Override
                     public void work(Compiler compiler) throws Exception
                     {
-                        compiler.src = Preprocessor.process(compiler.src);
+                        compiler.src = Preprocessor.process(compiler.src, compiler.includeFiles);
                         compiler.components.add(new SrcComponent(0, compiler.src));
                         compiler.symbols.put("$", compiler.currentLocation);
+                    }
+                },
+        INIT(PREPROCESSOR)
+                {
+                    @Override
+                    public void work(Compiler compiler) throws Exception
+                    {
+
                     }
                 };
 

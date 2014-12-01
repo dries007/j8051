@@ -78,7 +78,7 @@ public class Main
             }
             System.out.println(" -=- File used -=- ");
             System.out.println(Main.srcFile.getAbsolutePath());
-            Compiler compiler = new Compiler(FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, DEFAULT_ENCODING)));
+            Compiler compiler = new Compiler(FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT)));
             while (compiler.hasWork()) compiler.doWork();
             System.out.println(" -=- Done -=- ");
         }

@@ -34,77 +34,61 @@ import net.dries007.j8051.gui.MainGui;
 
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * @author Dries007
  */
-public class AsmDocumentListener extends Thread implements DocumentListener
+public class AsmDocumentListener implements DocumentListener
 {
-    public static final AsmDocumentListener DOCUMENT_LISTENER = new AsmDocumentListener();
-
-    long lastUpdate = 0L;
-    private boolean running = true;
+    public static final  AsmDocumentListener DOCUMENT_LISTENER = new AsmDocumentListener();
+    private static final Timer               TIMER             = new Timer();
+    public               boolean             active            = true;
+    public               int                 count             = 0;
 
     private AsmDocumentListener()
     {
-        super("AsmDocumentListener");
+        super();
     }
 
     @Override
-    public void run()
+    public void insertUpdate(DocumentEvent e)
     {
-        while (running)
+        if (!active) return;
+        MainGui.MAIN_GUI.status.setText("Waiting for editing pause...");
+        count++;
+        TIMER.schedule(new Task(), 1000);
+    }
+
+    @Override
+    public void removeUpdate(DocumentEvent e)
+    {
+        if (!active) return;
+        MainGui.MAIN_GUI.status.setText("Waiting for editing pause...");
+        count++;
+        TIMER.schedule(new Task(), 1000);
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e)
+    {
+        if (!active) return;
+        MainGui.MAIN_GUI.status.setText("Waiting for editing pause...");
+        count++;
+        TIMER.schedule(new Task(), 1000);
+    }
+
+    public static class Task extends TimerTask
+    {
+        @Override
+        public void run()
         {
-            try
-            {
-                synchronized (this)
-                {
-                    this.wait();
-                }
-            }
-            catch (InterruptedException e)
-            {
-                //
-            }
-            while (true)
-            {
-                if (System.currentTimeMillis() - lastUpdate > 1000 && MainGui.MAIN_GUI.isAutoSaving())
-                {
-                    if (MainGui.MAIN_GUI.isAutoCompiling()) MainGui.MAIN_GUI.compile();
-                    MainGui.MAIN_GUI.saveChanges();
-                    break;
-                }
-            }
+            DOCUMENT_LISTENER.count--;
+            if (DOCUMENT_LISTENER.count != 0) return;
+
+            if (MainGui.MAIN_GUI.isAutoSaving()) MainGui.MAIN_GUI.saveChanges();
+            if (MainGui.MAIN_GUI.isAutoCompiling()) MainGui.MAIN_GUI.compile();
         }
-
-        System.out.println("END OF THREAD: AsmDocumentListener");
-    }
-
-    @Override
-    public void interrupt()
-    {
-        running = false;
-        super.interrupt();
-    }
-
-    @Override
-    public synchronized void insertUpdate(DocumentEvent e)
-    {
-        lastUpdate = System.currentTimeMillis();
-        this.notify();
-    }
-
-    @Override
-    public synchronized void removeUpdate(DocumentEvent e)
-    {
-        lastUpdate = System.currentTimeMillis();
-        this.notify();
-    }
-
-    @Override
-    public synchronized void changedUpdate(DocumentEvent e)
-    {
-        lastUpdate = System.currentTimeMillis();
-        this.notify();
     }
 }

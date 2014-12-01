@@ -62,7 +62,9 @@ public class Constants
     public static final String AUTO_COMPILE       = "auto.compile";
     public static final String AUTO_SAVE          = "auto.save";
     public static final String ENCODING           = "encoding";
-    public static final String DEFAULT_ENCODING   = "Cp1252";
+    public static final String ENCODING_DEFAULT   = null;
+    public static final String ENCODING_ANSI      = "CP1252";
+    public static final String ENCODING_UTF8      = "utf8";
     public static final String FONT_NAME          = "font.name";
     public static final String FONT_STYLE         = "font.style";
     public static final String FONT_SIZE          = "font.size";

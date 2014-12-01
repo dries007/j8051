@@ -2,7 +2,7 @@
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="net.dries007.j8051.gui.MainGui">
   <grid id="d06ba" binding="root" layout-manager="GridBagLayout">
     <constraints>
-      <xy x="20" y="20" width="695" height="521"/>
+      <xy x="20" y="20" width="695" height="563"/>
     </constraints>
     <properties/>
     <border type="none"/>
@@ -17,7 +17,7 @@
         <children>
           <grid id="bf81c" layout-manager="GridBagLayout">
             <constraints>
-              <tabbedpane title="ASM file"/>
+              <tabbedpane title="ASM files"/>
             </constraints>
             <properties/>
             <border type="none"/>
@@ -42,6 +42,26 @@
               </scrollpane>
             </children>
           </grid>
+          <grid id="5512f" layout-manager="GridBagLayout">
+            <constraints>
+              <tabbedpane title="Include Files"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <tabbedpane id="1eace" binding="includeFiles">
+                <constraints>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
+                    <preferred-size width="200" height="200"/>
+                  </grid>
+                  <gridbag weightx="1.0" weighty="1.0"/>
+                </constraints>
+                <properties/>
+                <border type="none"/>
+                <children/>
+              </tabbedpane>
+            </children>
+          </grid>
           <grid id="436bb" layout-manager="GridBagLayout">
             <constraints>
               <tabbedpane title="Pre-processed"/>
@@ -49,17 +69,15 @@
             <properties/>
             <border type="none"/>
             <children>
-              <scrollpane id="6bb0a">
+              <scrollpane id="7f53e" class="org.fife.ui.rtextarea.RTextScrollPane">
                 <constraints>
-                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
                   <gridbag weightx="1.0" weighty="1.0"/>
                 </constraints>
-                <properties>
-                  <verticalScrollBarPolicy value="22"/>
-                </properties>
+                <properties/>
                 <border type="none"/>
                 <children>
-                  <component id="b04b0" class="javax.swing.JTextArea" binding="preText">
+                  <component id="35f91" class="org.fife.ui.rsyntaxtextarea.RSyntaxTextArea" binding="preText">
                     <constraints/>
                     <properties>
                       <editable value="false"/>
@@ -103,7 +121,7 @@
               <tabbedpane title="Symbols"/>
             </constraints>
             <properties/>
-            <border type="none" title="Symbols"/>
+            <border type="none"/>
             <children>
               <scrollpane id="5a958">
                 <constraints>
@@ -115,7 +133,7 @@
                 </properties>
                 <border type="none"/>
                 <children>
-                  <component id="4f7a2" class="javax.swing.JTable" binding="constantsTable">
+                  <component id="4f7a2" class="javax.swing.JTable" binding="symbolsTable">
                     <constraints/>
                     <properties>
                       <autoCreateRowSorter value="true"/>
@@ -162,6 +180,30 @@
         </constraints>
         <properties/>
       </component>
+      <component id="c5eb2" class="javax.swing.JLabel">
+        <constraints>
+          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <gridbag top="2" left="10" bottom="2" right="0" weightx="0.0" weighty="0.0" ipadx="10"/>
+        </constraints>
+        <properties>
+          <text value="Status:"/>
+        </properties>
+      </component>
+      <component id="f4c22" class="javax.swing.JLabel" binding="status">
+        <constraints>
+          <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="0.0" weighty="0.0"/>
+        </constraints>
+        <properties>
+          <text value="Label"/>
+        </properties>
+      </component>
     </children>
   </grid>
+  <buttonGroups>
+    <group name="buttonGroup1">
+      <member id="e6297"/>
+      <member id="9e14d"/>
+    </group>
+  </buttonGroups>
 </form>
