@@ -50,9 +50,12 @@ import javax.swing.table.TableColumnModel;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import java.awt.*;
+import java.awt.Window;
 import java.awt.event.*;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
@@ -142,6 +145,7 @@ public class MainGui
 
         // Main gui init
 
+
         frame = new JFrame("j8051");
         frame.setContentPane(this.$$$getRootComponent$$$());
         frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -150,6 +154,9 @@ public class MainGui
         frame.setLocation(parseInt(PROPERTIES.getProperty(WINDOW_X, "0")), parseInt(PROPERTIES.getProperty(WINDOW_Y, "0")));
         frame.setSize(parseInt(PROPERTIES.getProperty(WINDOW_W, "740")), parseInt(PROPERTIES.getProperty(WINDOW_H, "760")));
         frame.setVisible(true);
+        ArrayList<Image> imageList = new ArrayList<>();
+        for (String res : new String[]{"1024", "512", "256", "128"}) imageList.add(Toolkit.getDefaultToolkit().getImage(getClass().getResource("/icon/j8051-" + res + ".png")));
+        frame.setIconImages(imageList);
         frame.addComponentListener(new ComponentListener()
         {
             @Override
