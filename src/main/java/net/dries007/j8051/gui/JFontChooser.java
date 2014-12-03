@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package net.dries007.j8051.util;
+package net.dries007.j8051.gui;
 
 import javax.swing.*;
 import javax.swing.border.Border;

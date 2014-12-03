@@ -29,7 +29,7 @@
  *
  */
 
-package net.dries007.j8051.util;
+package net.dries007.j8051.gui;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;

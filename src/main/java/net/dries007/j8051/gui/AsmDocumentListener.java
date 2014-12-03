@@ -28,9 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package net.dries007.j8051.util;
-
-import net.dries007.j8051.gui.MainGui;
+package net.dries007.j8051.gui;
 
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -58,7 +56,7 @@ public class AsmDocumentListener implements DocumentListener
         if (!active) return;
         MainGui.MAIN_GUI.status.setText("Waiting for editing pause...");
         count++;
-        TIMER.schedule(new Task(), 1000);
+        TIMER.schedule(new Task(), 2500);
     }
 
     @Override
@@ -67,7 +65,7 @@ public class AsmDocumentListener implements DocumentListener
         if (!active) return;
         MainGui.MAIN_GUI.status.setText("Waiting for editing pause...");
         count++;
-        TIMER.schedule(new Task(), 1000);
+        TIMER.schedule(new Task(), 2500);
     }
 
     @Override
@@ -76,7 +74,7 @@ public class AsmDocumentListener implements DocumentListener
         if (!active) return;
         MainGui.MAIN_GUI.status.setText("Waiting for editing pause...");
         count++;
-        TIMER.schedule(new Task(), 1000);
+        TIMER.schedule(new Task(), 2500);
     }
 
     public static class Task extends TimerTask
@@ -84,11 +82,18 @@ public class AsmDocumentListener implements DocumentListener
         @Override
         public void run()
         {
-            DOCUMENT_LISTENER.count--;
+            DOCUMENT_LISTENER.count --;
             if (DOCUMENT_LISTENER.count != 0) return;
 
             if (MainGui.MAIN_GUI.isAutoSaving()) MainGui.MAIN_GUI.saveChanges();
-            if (MainGui.MAIN_GUI.isAutoCompiling()) MainGui.MAIN_GUI.compile();
+            new Thread(new Runnable()
+            {
+                @Override
+                public void run()
+                {
+                    if (MainGui.MAIN_GUI.isAutoCompiling()) MainGui.MAIN_GUI.compile();
+                }
+            }).start();
         }
     }
 }

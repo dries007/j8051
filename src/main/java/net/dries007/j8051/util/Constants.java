@@ -70,6 +70,7 @@ public class Constants
     public static final String FONT_SIZE          = "font.size";
     public static final String TABSIZE            = "tabSize";
     public static final String INCLUDEDIR         = "includedir";
+    public static final String UPLOADCMD          = "uploadCmd";
     /*
      * Prefixes
      */
@@ -88,7 +89,7 @@ public class Constants
     public static final Pattern ELSE      = Pattern.compile("^\\s*#else \\s*$", CASE_INSENSITIVE);
     public static final Pattern ENDIF     = Pattern.compile("^\\s*#endif\\s*$", CASE_INSENSITIVE);
 
-    public static final Pattern STRING = Pattern.compile("\"(.*)\"");
+    public static final Pattern STRING = Pattern.compile("\"(.*?)\"");
     public static final Pattern CHAR   = Pattern.compile("'(.)'");
 
     public static final Pattern EQU   = Pattern.compile("(\\w+)\\s+equ\\s", CASE_INSENSITIVE);

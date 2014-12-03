@@ -164,7 +164,7 @@ public class Preprocessor
         Matcher matcher;
         while ((matcher = CHAR.matcher(src)).find())
         {
-            src = matcher.replaceFirst(Integer.toHexString(Character.getNumericValue(matcher.group(1).charAt(0))) + "h");
+            src = matcher.replaceFirst(Integer.toHexString((int) matcher.group(1).charAt(0)) + "h");
         }
         while ((matcher = STRING.matcher(src)).find())
         {

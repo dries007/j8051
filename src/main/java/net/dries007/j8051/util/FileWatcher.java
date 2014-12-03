@@ -37,7 +37,7 @@
 //import java.io.IOException;
 //import java.nio.file.*;
 //
-//import static net.dries007.j8051.util.AsmDocumentListener.DOCUMENT_LISTENER;
+//import static net.dries007.j8051.gui.AsmDocumentListener.DOCUMENT_LISTENER;
 //
 ///**
 // * @author Dries007

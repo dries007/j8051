@@ -146,6 +146,10 @@ public class AsmTokenMaker extends AbstractTokenMaker
                             currentTokenType = Token.WHITESPACE;
                             break;
 
+                        case '\'':
+                            if (!prepocessor) currentTokenType = Token.LITERAL_CHAR;
+                            break;
+
                         case '"':
                             if (!prepocessor) currentTokenType = Token.LITERAL_STRING_DOUBLE_QUOTE;
                             break;
@@ -177,6 +181,7 @@ public class AsmTokenMaker extends AbstractTokenMaker
 
                     break;
 
+                case Token.SEPARATOR:
                 case Token.WHITESPACE:
 
                     switch (c) {
@@ -184,6 +189,15 @@ public class AsmTokenMaker extends AbstractTokenMaker
                         case ' ':
                         case '\t':
                             break;   // Still whitespace.
+
+                        case '\'':
+                            if (!prepocessor)
+                            {
+                                addToken(text, currentTokenStart,i-1, Token.WHITESPACE, newStartOffset+currentTokenStart);
+                                currentTokenStart = i;
+                                currentTokenType = Token.LITERAL_CHAR;
+                            }
+                            break;
 
                         case '"':
                             if (!prepocessor)
@@ -208,7 +222,7 @@ public class AsmTokenMaker extends AbstractTokenMaker
                             addToken(text, currentTokenStart,i-1, Token.WHITESPACE, newStartOffset+currentTokenStart);
                             currentTokenStart = i;
 
-                            if (RSyntaxUtilities.isDigit(c)) {
+                            if (RSyntaxUtilities.isHexCharacter(c) || c == '#') {
                                 currentTokenType = Token.LITERAL_NUMBER_HEXADECIMAL;
                                 break;
                             }
