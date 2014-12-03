@@ -32,7 +32,7 @@ package net.dries007.j8051.gui;
 
 import net.dries007.j8051.Main;
 import net.dries007.j8051.compiler.Compiler;
-import net.dries007.j8051.util.*;
+import net.dries007.j8051.util.Helper;
 import net.dries007.j8051.util.exceptions.CompileException;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
@@ -49,7 +49,6 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -69,7 +68,6 @@ import static net.dries007.j8051.util.Constants.*;
 public class MainGui
 {
     public static final MainGui      MAIN_GUI      = new MainGui();
-    //private static FileWatcher fileWatcher;
     public final        JFileChooser fileChooser   = new JFileChooser();
     public final        JFileChooser folderChooser = new JFileChooser();
     public final        JFontChooser fontChooser   = new JFontChooser();
@@ -83,23 +81,22 @@ public class MainGui
     private       JPanel               root;
     private       JMenuBar             menuBar;
     private       RSyntaxTextArea      asmContents;
-    private RSyntaxTextArea      preText;
-    private JTable               symbolsTable;
-    private JTable               componentsTable;
-    private JTable               hexTable;
-    private JTabbedPane          includeFiles;
-    public  JLabel               status;
-    private JButton              compileButton;
-    private JButton              uploadButton;
-    private JButton              saveButton;
-    //private       JCheckBoxMenuItem autoLoad;
-    private JCheckBoxMenuItem    autoSave;
-    private JCheckBoxMenuItem    autoCompile;
-    private JMenuItem            includeFolder;
-    private JRadioButtonMenuItem encodingDefault;
-    private JRadioButtonMenuItem encodingUtf8;
-    private JRadioButtonMenuItem encodingAnsi;
-    private JMenuItem            uploadCommand;
+    private       RSyntaxTextArea      preText;
+    private       JTable               symbolsTable;
+    private       JTable               componentsTable;
+    private       JTable               hexTable;
+    private       JTabbedPane          includeFiles;
+    public        JLabel               status;
+    private       JButton              compileButton;
+    private       JButton              uploadButton;
+    private       JButton              saveButton;
+    private       JCheckBoxMenuItem    autoSave;
+    private       JCheckBoxMenuItem    autoCompile;
+    private       JMenuItem            includeFolder;
+    private       JRadioButtonMenuItem encodingDefault;
+    private       JRadioButtonMenuItem encodingUtf8;
+    private       JRadioButtonMenuItem encodingAnsi;
+    private       JMenuItem            uploadCommand;
 
     private UploadRunnable  uploadRunnable  = new UploadRunnable();
     private CompileRunnable compileRunnable = new CompileRunnable();
@@ -564,14 +561,6 @@ public class MainGui
                 }
             }
         });
-//        autoLoad.addActionListener(new ActionListener()
-//        {
-//            @Override
-//            public void actionPerformed(ActionEvent e)
-//            {
-//                PROPERTIES.setProperty(AUTO_LOAD, Boolean.toString(autoLoad.getState()));
-//            }
-//        });
         autoCompile.addActionListener(new ActionListener()
         {
             @Override
@@ -612,7 +601,7 @@ public class MainGui
             {
                 try
                 {
-                    String cmd = (String) JOptionPane.showInputDialog(frame, "Tab size?", "Tab size", JOptionPane.QUESTION_MESSAGE, null, null, PROPERTIES.getProperty(UPLOADCMD));
+                    String cmd = (String) JOptionPane.showInputDialog(frame, "Upload command? Use '$filename' as replacement for the .hex file.", "Upload command", JOptionPane.QUESTION_MESSAGE, null, null, PROPERTIES.getProperty(UPLOADCMD));
                     if (cmd != null) PROPERTIES.setProperty(UPLOADCMD, cmd);
                 }
                 catch (NumberFormatException ex)
@@ -676,24 +665,7 @@ public class MainGui
 
     public void changeFile()
     {
-//        if (fileWatcher != null)
-//        {
-//            fileWatcher.interrupt();
-//            fileWatcher = null;
-//        }
-        if (Main.srcFile != null)
-        {
-            frame.setTitle(String.format("j8051 - %s", Main.srcFile.getAbsolutePath()));
-//            try
-//            {
-//                fileWatcher = new FileWatcher(Main.srcFile);
-//                fileWatcher.start();
-//            }
-//            catch (IOException e)
-//            {
-//                e.printStackTrace();
-//            }
-        }
+        if (Main.srcFile != null) frame.setTitle(String.format("j8051 - %s", Main.srcFile.getAbsolutePath()));
         asmContents.setEditable(Main.srcFile != null);
         setAsmContents();
     }
@@ -795,10 +767,6 @@ public class MainGui
         buttonGroup.add(encodingAnsi);
         encoding.add(encodingAnsi);
 
-//        autoLoad = new JCheckBoxMenuItem("Auto load changes from disk");
-//        autoLoad.setState(parseBoolean(PROPERTIES.getProperty(AUTO_LOAD, "true")));
-//        fileMenu.add(autoLoad);
-
         menuBar.add(fileMenu);
         //  Viewmenu
         JMenu viewMenu = new JMenu("View");
@@ -832,11 +800,6 @@ public class MainGui
 
         menuBar.add(optionsMenu);
     }
-
-//    public boolean isAutoUpdating()
-//    {
-//        return autoLoad.getState();
-//    }
 
     public boolean isAutoCompiling()
     {
