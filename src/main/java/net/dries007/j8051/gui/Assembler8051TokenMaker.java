@@ -79,6 +79,7 @@ import java.io.IOException;
  * <li>As long as the registers list is not rewritten to remove XC888 specific entries, 'Roggemans M. aka MGM' must be credited for the list.</li>
  * </ul>
  * <p/>
+ *
  * @author Dries007
  * @version 0.1
  */
@@ -1429,7 +1430,7 @@ public class Assembler8051TokenMaker extends AbstractJFlexTokenMaker
         // 's' has been updated.
         zzBuffer = s.array;
         /*
-		 * We replaced the line below with the two below it because zzRefill
+         * We replaced the line below with the two below it because zzRefill
 		 * no longer "refills" the buffer (since the way we do it, it's always
 		 * "full" the first time through, since it points to the segment's
 		 * array).  So, we assign zzEndRead here.
