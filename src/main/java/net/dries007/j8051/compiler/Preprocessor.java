@@ -183,7 +183,7 @@ public class Preprocessor
     private static void include(ListIterator<String> i, File file, HashMap<String, String> includeFiles) throws IncludeException, IOException
     {
         String text = FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT));
-        includeFiles.put(FilenameUtils.getBaseName(file.getName()), text);
+        includeFiles.put(FilenameUtils.getBaseName(file.getName()), text.replaceAll("\\r\\n", "\n"));
         for (String line : text.split("[\\r\\n]+"))
         {
             int comment = line.indexOf(PREFIX_COMMENT);

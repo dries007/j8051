@@ -38,6 +38,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
@@ -394,7 +395,7 @@ public class MainGui
     {
         $$$setupUI$$$();
         AbstractTokenMakerFactory atmf = (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
-        atmf.putMapping("text/8051", AsmTokenMaker.class.getName());
+        atmf.putMapping("text/8051", Assembler8051TokenMaker.class.getName());
 
         asmContents.setSyntaxEditingStyle("text/8051");
         preText.setSyntaxEditingStyle("text/8051");
