@@ -48,9 +48,9 @@ public class Bytes extends Component
     public final Object[] objects;
     private int size = -1;
 
-    private Bytes(int startOffset, Matcher matcher, Type type)
+    private Bytes(int srcLine, Matcher matcher, Type type)
     {
-        super(matcher.start() + startOffset, matcher.end() + startOffset);
+        super(srcLine);
         this.type = type;
         if (type == Type.DS) this.objects = new String[]{matcher.group(1), matcher.group(2)};
         else this.objects = matcher.group(1).split(",\\s*");
@@ -72,13 +72,13 @@ public class Bytes extends Component
                     if (!matcher.find()) continue;
                     i.remove();
 
-                    SrcComponent pre = new SrcComponent(component.getSrcStart(), src.substring(0, matcher.start()));
+                    SrcComponent pre = new SrcComponent(component.getSrcLine(), src.substring(0, matcher.start()));
                     if (pre.shouldAdd()) i.add(pre);
 
-                    Bytes bytes = new Bytes(pre.getSrcEnd(), matcher, type);
+                    Bytes bytes = new Bytes(pre.getSrcLine(), matcher, type);
                     i.add(bytes);
 
-                    SrcComponent post = new SrcComponent(bytes.getSrcEnd(), src.substring(matcher.end()));
+                    SrcComponent post = new SrcComponent(pre.getSrcLine(), src.substring(matcher.end()));
                     if (post.shouldAdd()) i.add(post);
                 }
             }

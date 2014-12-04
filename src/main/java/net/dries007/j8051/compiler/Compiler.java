@@ -56,13 +56,14 @@ public class Compiler
     public final LinkedList<Component>   components      = new LinkedList<>();
     public final HashMap<String, Symbol> symbols         = new HashMap<>();
     public final HashMap<String, String> includeFiles    = new HashMap<>();
-    public String src;
+    private final String src;
+    public        String postPre;
     public  Integer[] hex   = new Integer[0];
     private Stage     stage = Stage.INIT;
 
     public Compiler(String src)
     {
-        this.src = src;
+        this.src = src.replaceAll("\\r\\n", "\n");
     }
 
     public boolean hasWork()
@@ -255,8 +256,10 @@ public class Compiler
                     @Override
                     public void work(Compiler compiler) throws Exception
                     {
-                        compiler.src = Preprocessor.process(compiler.src, compiler.includeFiles);
-                        compiler.components.add(new SrcComponent(0, compiler.src));
+                        Preprocessor.process(compiler.components, compiler.src, compiler.includeFiles);
+                        StringBuilder stringBuilder = new StringBuilder();
+                        for (Component component : compiler.components) stringBuilder.append(((SrcComponent) component).contents).append('\n');
+                        compiler.postPre = stringBuilder.toString();
                         compiler.symbols.put("$", compiler.currentLocation);
                     }
                 },

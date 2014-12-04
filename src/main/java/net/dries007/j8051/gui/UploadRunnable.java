@@ -29,65 +29,48 @@
  *
  */
 
-package net.dries007.j8051.compiler.components;
+package net.dries007.j8051.gui;
 
-import net.dries007.j8051.util.Helper;
-import net.dries007.j8051.util.exceptions.CompileException;
-import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
+import net.dries007.j8051.Main;
+import org.apache.commons.io.FilenameUtils;
 
-import java.util.HashMap;
-import java.util.Map;
+import javax.swing.*;
+import java.io.File;
+import java.util.StringTokenizer;
+
+import static net.dries007.j8051.util.Constants.PROPERTIES;
+import static net.dries007.j8051.util.Constants.UPLOADCMD;
 
 /**
  * @author Dries007
  */
-public abstract class Component
+public class UploadRunnable implements Runnable
 {
-    public    int     address;
-    protected int[]   data;
-    private   int     srcLine;
-    private   boolean resolved;
+    public boolean running;
 
-    protected Component(int srcLine)
+    public UploadRunnable()
     {
-        this.srcLine = srcLine;
+
     }
 
-    public Object[] getDebug()
+    @Override
+    public void run()
     {
-        return new Object[]{getSrcLine(), this.getClass().getSimpleName().replace("Component", ""), getSubType(), getContents(), String.format("0x%04X", address), Helper.toHexString(getData())};
-    }
-
-    protected abstract Object getContents();
-
-    protected abstract Object getSubType();
-
-    public abstract Integer getSize(Map<String, Symbol> symbols);
-
-    public boolean isResolved()
-    {
-        return resolved;
-    }
-
-    public int[] getData()
-    {
-        return data;
-    }
-
-    public abstract void tryResolve(int currentLocation, HashMap<String, Symbol> symbols) throws SymbolUndefinedException, CompileException;
-
-    public void setResolved(boolean resolved)
-    {
-        this.resolved = resolved;
-    }
-
-    public int getSrcLine()
-    {
-        return srcLine;
-    }
-
-    public void setSrcLine(int srcLine)
-    {
-        this.srcLine = srcLine;
+        running = true;
+        try
+        {
+            if (!PROPERTIES.containsKey(UPLOADCMD)) return;
+            File file = new File(Main.srcFile.getParentFile(), FilenameUtils.getBaseName(Main.srcFile.getName()) + ".hex");
+            StringTokenizer st = new StringTokenizer(PROPERTIES.getProperty(UPLOADCMD).replace("$filename", "\"" + file.getAbsolutePath() + "\""));
+            String[] cmdarray = new String[st.countTokens()];
+            for (int i = 0; st.hasMoreTokens(); i++) cmdarray[i] = st.nextToken();
+            Process process = new ProcessBuilder(cmdarray).inheritIO().start();
+            if (process.waitFor() != 0) JOptionPane.showMessageDialog(MainGui.MAIN_GUI.frame, "Upload process didn't exit with 0, but with " + process.exitValue(), "Upload error.", JOptionPane.ERROR_MESSAGE);
+        }
+        catch (Exception ex)
+        {
+            ex.printStackTrace();
+        }
+        running = false;
     }
 }

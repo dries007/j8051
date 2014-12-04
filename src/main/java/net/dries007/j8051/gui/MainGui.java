@@ -31,19 +31,16 @@
 package net.dries007.j8051.gui;
 
 import net.dries007.j8051.Main;
-import net.dries007.j8051.compiler.Compiler;
-import net.dries007.j8051.util.Helper;
-import net.dries007.j8051.util.exceptions.CompileException;
+import net.dries007.j8051.compiler.components.Symbol;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
+import org.fife.ui.rsyntaxtextarea.parser.DefaultParserNotice;
+import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import javax.swing.text.BadLocationException;
@@ -54,13 +51,14 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.StringTokenizer;
+import java.util.HashMap;
 
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;
 import static javax.swing.JFileChooser.DIRECTORIES_ONLY;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 import static net.dries007.j8051.gui.AsmDocumentListener.DOCUMENT_LISTENER;
+import static net.dries007.j8051.gui.AsmParser.ASM_PARSER;
 import static net.dries007.j8051.util.Constants.*;
 
 /**
@@ -72,35 +70,541 @@ public class MainGui
     public final        JFileChooser fileChooser   = new JFileChooser();
     public final        JFileChooser folderChooser = new JFileChooser();
     public final        JFontChooser fontChooser   = new JFontChooser();
-    private final JFrame               frame;
-    private       JTabbedPane          tabPane;
-    private       JMenuItem            loadFile;
-    private       JMenuItem            saveFile;
-    private       JMenuItem            changeFont;
-    private       JMenuItem            changeTabSize;
-    private       JMenuItem            compile;
-    private       JPanel               root;
-    private       JMenuBar             menuBar;
-    private       RSyntaxTextArea      asmContents;
-    private       RSyntaxTextArea      preText;
-    private       JTable               symbolsTable;
-    private       JTable               componentsTable;
-    private       JTable               hexTable;
-    private       JTabbedPane          includeFiles;
-    public        JLabel               status;
-    private       JButton              compileButton;
-    private       JButton              uploadButton;
-    private       JButton              saveButton;
-    private       JCheckBoxMenuItem    autoSave;
-    private       JCheckBoxMenuItem    autoCompile;
-    private       JMenuItem            includeFolder;
-    private       JRadioButtonMenuItem encodingDefault;
-    private       JRadioButtonMenuItem encodingUtf8;
-    private       JRadioButtonMenuItem encodingAnsi;
-    private       JMenuItem            uploadCommand;
+    public final JFrame               frame;
+    public       JTabbedPane          tabPane;
+    public       JMenuItem            loadFile;
+    public       JMenuItem            saveFile;
+    public       JMenuItem            changeFont;
+    public       JMenuItem            changeTabSize;
+    public       JMenuItem            compile;
+    public       JPanel               root;
+    public       JMenuBar             menuBar;
+    public       RSyntaxTextArea      asmContents;
+    public       RSyntaxTextArea      preText;
+    public       JTable               symbolsTable;
+    public       JTable               componentsTable;
+    public       JTable               hexTable;
+    public       JTabbedPane          includeFiles;
+    public       JLabel               status;
+    public       JButton              compileButton;
+    public       JButton              uploadButton;
+    public       JButton              saveButton;
+    public       RTextScrollPane      asmContentsScroll;
+    public       RTextScrollPane      preTextScroll;
+    public       JCheckBoxMenuItem    autoSave;
+    public       JCheckBoxMenuItem    autoCompile;
+    public       JMenuItem            includeFolder;
+    public       JRadioButtonMenuItem encodingDefault;
+    public       JRadioButtonMenuItem encodingUtf8;
+    public       JRadioButtonMenuItem encodingAnsi;
+    public       JMenuItem            uploadCommand;
 
-    private UploadRunnable  uploadRunnable  = new UploadRunnable();
-    private CompileRunnable compileRunnable = new CompileRunnable();
+    public HashMap<String, Symbol> symbolHashMap;
+
+    public UploadRunnable  uploadRunnable  = new UploadRunnable();
+    public CompileRunnable compileRunnable = new CompileRunnable();
+
+    private MainGui()
+    {
+        $$$setupUI$$$();
+        AbstractTokenMakerFactory atmf = (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
+        atmf.putMapping(SYNTAX_NAME, Assembler8051TokenMaker.class.getName());
+
+        fontChooser.setSelectedFontFamily(PROPERTIES.getProperty(FONT_NAME, "Courier New"));
+        fontChooser.setSelectedFontStyle(Integer.parseInt(PROPERTIES.getProperty(FONT_STYLE, Integer.toString(Font.PLAIN))));
+        fontChooser.setSelectedFontSize(Integer.parseInt(PROPERTIES.getProperty(FONT_SIZE, "12")));
+
+        asmContents.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
+        asmContents.setFont(fontChooser.getSelectedFont());
+        asmContents.setSyntaxEditingStyle(SYNTAX_NAME);
+        TextLineNumber tln = new TextLineNumber(asmContents);
+        asmContentsScroll.setRowHeaderView(tln);
+        asmContents.addParser(ASM_PARSER);
+
+        preText.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
+        preText.setFont(fontChooser.getSelectedFont());
+        preText.setSyntaxEditingStyle(SYNTAX_NAME);
+        tln = new TextLineNumber(preText);
+        preTextScroll.setRowHeaderView(tln);
+
+        // DEBUG todo
+        componentsTable.setDefaultRenderer(Object.class, new FluoCellRenderer()
+        {
+            @Override
+            public boolean highlight(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+            {
+                return value.equals("UnsolvedComponent");
+            }
+        });
+        hexTable.setDefaultRenderer(Object.class, new FluoCellRenderer()
+        {
+            @Override
+            public boolean highlight(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+            {
+                return value.toString().length() > 2 && column != 0;
+            }
+        });
+        symbolsTable.setDefaultRenderer(Object.class, new FluoCellRenderer()
+        {
+            @Override
+            public boolean highlight(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
+            {
+                return value.toString().equals("_UNDEFINED_");
+            }
+        });
+
+        // Main gui init
+        frame = new JFrame("j8051");
+        frame.setContentPane(this.$$$getRootComponent$$$());
+        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        frame.setJMenuBar(menuBar);
+        frame.pack();
+        frame.setLocation(parseInt(PROPERTIES.getProperty(WINDOW_X, "0")), parseInt(PROPERTIES.getProperty(WINDOW_Y, "0")));
+        frame.setSize(parseInt(PROPERTIES.getProperty(WINDOW_W, "740")), parseInt(PROPERTIES.getProperty(WINDOW_H, "760")));
+        frame.setVisible(true);
+        try
+        {
+            for (String res : new String[]{"1024", "512", "256", "128"})
+            {
+                ArrayList<Image> imageList = new ArrayList<>();
+                URL url = getClass().getResource("/icon/j8051-" + res + ".png");
+                if (url == null) continue;
+                imageList.add(Toolkit.getDefaultToolkit().getImage(url));
+                frame.setIconImages(imageList);
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        frame.addComponentListener(new ComponentListener()
+        {
+            @Override
+            public void componentResized(ComponentEvent e)
+            {
+                PROPERTIES.setProperty(WINDOW_W, Integer.toString(e.getComponent().getWidth()));
+                PROPERTIES.setProperty(WINDOW_H, Integer.toString(e.getComponent().getHeight()));
+                saveProperties();
+            }
+
+            @Override
+            public void componentMoved(ComponentEvent e)
+            {
+                PROPERTIES.setProperty(WINDOW_X, Integer.toString(e.getComponent().getX()));
+                PROPERTIES.setProperty(WINDOW_Y, Integer.toString(e.getComponent().getY()));
+                saveProperties();
+            }
+
+            @Override
+            public void componentShown(ComponentEvent e)
+            {
+            }
+
+            @Override
+            public void componentHidden(ComponentEvent e)
+            {
+            }
+        });
+        frame.addWindowListener(new WindowAdapter()
+        {
+            @Override
+            public void windowClosed(WindowEvent e)
+            {
+                super.windowClosed(e);
+                //fileWatcher.interrupt();
+            }
+        });
+        loadFile.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION)
+                {
+                    File file = fileChooser.getSelectedFile();
+                    Main.setSrcFile(file);
+                    changeFile();
+                }
+            }
+        });
+        compile.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                MAIN_GUI.compile();
+            }
+        });
+        compileButton.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                MAIN_GUI.compile();
+            }
+        });
+        saveButton.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                saveChanges();
+            }
+        });
+        saveFile.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                saveChanges();
+            }
+        });
+        uploadButton.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                upload();
+            }
+        });
+        changeFont.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (JFontChooser.OK_OPTION == fontChooser.showDialog(frame))
+                {
+                    asmContents.setFont(fontChooser.getSelectedFont());
+                    PROPERTIES.setProperty(FONT_NAME, fontChooser.getSelectedFontFamily());
+                    PROPERTIES.setProperty(FONT_SIZE, Integer.toString(fontChooser.getSelectedFontSize()));
+                    PROPERTIES.setProperty(FONT_STYLE, Integer.toString(fontChooser.getSelectedFontStyle()));
+                    saveProperties();
+                }
+            }
+        });
+        autoCompile.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                PROPERTIES.setProperty(AUTO_COMPILE, Boolean.toString(autoCompile.getState()));
+                saveProperties();
+            }
+        });
+        autoSave.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                PROPERTIES.setProperty(AUTO_SAVE, Boolean.toString(autoSave.getState()));
+                saveProperties();
+            }
+        });
+        changeTabSize.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                try
+                {
+                    int i = Integer.parseInt(JOptionPane.showInputDialog(frame, "Tab size?", "Tab size", JOptionPane.QUESTION_MESSAGE));
+                    PROPERTIES.setProperty(TABSIZE, Integer.toString(i));
+                    asmContents.setTabSize(i);
+                    saveProperties();
+                }
+                catch (NumberFormatException ex)
+                {
+                    ex.printStackTrace();
+                }
+            }
+        });
+        uploadCommand.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                try
+                {
+                    String cmd = (String) JOptionPane.showInputDialog(frame, "Upload command? Use '$filename' as replacement for the .hex file.", "Upload command", JOptionPane.QUESTION_MESSAGE, null, null, PROPERTIES.getProperty(UPLOADCMD));
+                    if (cmd != null)
+                    {
+                        PROPERTIES.setProperty(UPLOADCMD, cmd);
+                        saveProperties();
+                    }
+                }
+                catch (NumberFormatException ex)
+                {
+                    ex.printStackTrace();
+                }
+            }
+        });
+        includeFolder.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (folderChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION)
+                {
+                    Main.setIncludeFolder(folderChooser.getSelectedFile());
+                }
+            }
+        });
+        encodingDefault.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                PROPERTIES.setProperty(ENCODING, ENCODING_DEFAULT);
+                changeFile();
+                saveProperties();
+            }
+        });
+        encodingAnsi.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                PROPERTIES.setProperty(ENCODING, ENCODING_ANSI);
+                changeFile();
+                saveProperties();
+            }
+        });
+        encodingUtf8.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                PROPERTIES.setProperty(ENCODING, ENCODING_UTF8);
+                changeFile();
+                saveProperties();
+            }
+        });
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), "compile");
+        root.getActionMap().put("compile", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                compile();
+            }
+        });
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_F6, 0), "upload");
+        root.getActionMap().put("upload", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                upload();
+            }
+        });
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK), "save");
+        root.getActionMap().put("save", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                saveChanges();
+            }
+        });
+        symbolsTable.addMouseListener(new MouseAdapter()
+        {
+            //TODO: Do this automatically, and on all files (src + includes)
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                if (e.getClickCount() != 2) return;
+                if (symbolHashMap == null) return;
+                if (tabPane.getSelectedIndex() != 0) tabPane.setSelectedIndex(0);
+                try
+                {
+                    Symbol symbol = symbolHashMap.get(symbolsTable.getValueAt(symbolsTable.getSelectedRow(), 0).toString());
+                    DefaultParserNotice notice = new DefaultParserNotice(ASM_PARSER, symbol.key, symbol.getSrcLine());
+                    notice.setLevel(ParserNotice.Level.INFO);
+                    notice.setToolTipText(String.format("String: %s\nHex: %X\nDec: %d", symbol.stringValue, symbol.intValue, symbol.intValue));
+                    ASM_PARSER.result.addNotice(notice);
+                    asmContents.forceReparsing(ASM_PARSER);
+                    asmContents.scrollRectToVisible(new Rectangle(0, asmContents.yForLine(symbol.getSrcLine()), 10, 10));
+                }
+                catch (BadLocationException e1)
+                {
+                    e1.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public void init()
+    {
+        changeFile();
+        compile();
+        asmContents.getDocument().addDocumentListener(DOCUMENT_LISTENER);
+
+        if (PROPERTIES.containsKey(SRC_FILE))
+        {
+            File file = new File(PROPERTIES.getProperty(SRC_FILE));
+            if (file.exists()) fileChooser.setSelectedFile(file);
+        }
+    }
+
+    public void changeFile()
+    {
+        if (Main.srcFile != null) frame.setTitle(String.format("j8051 - %s", Main.srcFile.getAbsolutePath()));
+        asmContents.setEditable(Main.srcFile != null);
+        setAsmContents();
+    }
+
+    public void setAsmContents()
+    {
+        AsmDocumentListener.DOCUMENT_LISTENER.active = false;
+        Document document = asmContents.getDocument();
+        try
+        {
+            document.remove(0, document.getLength());
+            if (Main.srcFile != null)
+            {
+                document.insertString(0, FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT)).replace("\r", ""), null);
+            }
+        }
+        catch (BadLocationException | IOException e1)
+        {
+            e1.printStackTrace();
+        }
+        AsmDocumentListener.DOCUMENT_LISTENER.active = true;
+    }
+
+    public void upload()
+    {
+        if (!uploadRunnable.running) new Thread(uploadRunnable).start();
+    }
+
+    public void compile()
+    {
+        if (!compileRunnable.running) new Thread(compileRunnable).start();
+    }
+
+    public void resizeColumnWidth(JTable table)
+    {
+        final TableColumnModel columnModel = table.getColumnModel();
+        for (int column = 0; column < table.getColumnCount(); column++)
+        {
+            int width = 50; // Min width
+            for (int row = 0; row < table.getRowCount(); row++)
+            {
+                TableCellRenderer renderer = table.getCellRenderer(row, column);
+                Component comp = table.prepareRenderer(renderer, row, column);
+                width = Math.max(comp.getPreferredSize().width, width);
+            }
+            columnModel.getColumn(column).setPreferredWidth(width + 5);
+        }
+    }
+
+    private void createUIComponents()
+    {
+        // Filechooser specifications
+        fileChooser.addChoosableFileFilter(ASM_FILE_FILTER);
+        fileChooser.setFileHidingEnabled(true);
+        fileChooser.setMultiSelectionEnabled(false);
+        fileChooser.setFileFilter(ASM_FILE_FILTER);
+
+        // Folderchooser specifications
+        folderChooser.addChoosableFileFilter(FOLDER_FILTER);
+        folderChooser.setFileHidingEnabled(true);
+        folderChooser.setMultiSelectionEnabled(false);
+        folderChooser.setFileSelectionMode(DIRECTORIES_ONLY);
+        folderChooser.setFileFilter(FOLDER_FILTER);
+
+        //Menubar
+        menuBar = new JMenuBar();
+        //  Filemenu
+        JMenu fileMenu = new JMenu("File");
+
+        loadFile = new JMenuItem("Open...");
+        fileMenu.add(loadFile);
+
+        saveFile = new JMenuItem("Save");
+        fileMenu.add(saveFile);
+
+        fileMenu.addSeparator();
+
+        compile = new JMenuItem("Compile");
+        fileMenu.add(compile);
+
+        // Encoding menu, under file menu
+        JMenu encoding = new JMenu("Encoding");
+        fileMenu.add(encoding);
+
+        ButtonGroup buttonGroup = new ButtonGroup();
+
+        encodingDefault = new JRadioButtonMenuItem("Platform/Java default");
+        if (String.valueOf(PROPERTIES.getProperty(ENCODING)).equals(ENCODING_DEFAULT)) encodingDefault.setSelected(true);
+        buttonGroup.add(encodingDefault);
+        encoding.add(encodingDefault);
+
+        encodingUtf8 = new JRadioButtonMenuItem("UTF-8");
+        if (String.valueOf(PROPERTIES.getProperty(ENCODING)).equals(ENCODING_UTF8)) encodingUtf8.setSelected(true);
+        buttonGroup.add(encodingUtf8);
+        encoding.add(encodingUtf8);
+
+        encodingAnsi = new JRadioButtonMenuItem("ANSI");
+        if (String.valueOf(PROPERTIES.getProperty(ENCODING)).equals(ENCODING_ANSI)) encodingAnsi.setSelected(true);
+        buttonGroup.add(encodingAnsi);
+        encoding.add(encodingAnsi);
+
+        menuBar.add(fileMenu);
+        //  Viewmenu
+        JMenu viewMenu = new JMenu("View");
+
+        changeFont = new JMenuItem("Font...");
+        viewMenu.add(changeFont);
+
+        changeTabSize = new JMenuItem("Tab size...");
+        viewMenu.add(changeTabSize);
+
+        menuBar.add(viewMenu);
+
+        //  optionsmenu
+        JMenu optionsMenu = new JMenu("Options");
+
+        includeFolder = new JMenuItem("Include folder...");
+        optionsMenu.add(includeFolder);
+
+        uploadCommand = new JMenuItem("Upload command...");
+        optionsMenu.add(uploadCommand);
+
+        optionsMenu.addSeparator();
+
+        autoSave = new JCheckBoxMenuItem("Auto save");
+        autoSave.setState(parseBoolean(PROPERTIES.getProperty(AUTO_SAVE, "true")));
+        optionsMenu.add(autoSave);
+
+        autoCompile = new JCheckBoxMenuItem("Auto compile");
+        autoCompile.setState(parseBoolean(PROPERTIES.getProperty(AUTO_COMPILE, "true")));
+        optionsMenu.add(autoCompile);
+
+        menuBar.add(optionsMenu);
+    }
+
+    public boolean isAutoCompiling()
+    {
+        return autoCompile.getState();
+    }
+
+    public boolean isAutoSaving()
+    {
+        return autoSave.getState();
+    }
+
+    public void saveChanges()
+    {
+        try
+        {
+            FileUtils.writeStringToFile(Main.srcFile, asmContents.getDocument().getText(0, asmContents.getDocument().getLength()), PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT));
+        }
+        catch (IOException | BadLocationException e1)
+        {
+            e1.printStackTrace();
+        }
+    }
 
     /**
      * Method generated by IntelliJ IDEA GUI Designer
@@ -127,20 +631,27 @@ public class MainGui
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new GridBagLayout());
         tabPane.addTab("ASM files", panel1);
-        final RTextScrollPane rTextScrollPane1 = new RTextScrollPane();
+        asmContentsScroll = new RTextScrollPane();
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
-        panel1.add(rTextScrollPane1, gbc);
-        rTextScrollPane1.setBorder(BorderFactory.createTitledBorder("Source"));
+        panel1.add(asmContentsScroll, gbc);
+        asmContentsScroll.setBorder(BorderFactory.createTitledBorder("Source"));
         asmContents = new RSyntaxTextArea();
-        asmContents.setFadeCurrentLineHighlight(false);
-        asmContents.setTabsEmulated(false);
+        asmContents.setEOLMarkersVisible(false);
+        asmContents.setCodeFoldingEnabled(false);
+        asmContents.setFadeCurrentLineHighlight(true);
+        asmContents.setFractionalFontMetricsEnabled(false);
+        asmContents.setPaintTabLines(true);
+        asmContents.setRoundedSelectionEdges(false);
+        asmContents.setTabsEmulated(true);
         asmContents.setText("");
-        rTextScrollPane1.setViewportView(asmContents);
+        asmContents.setUseSelectedTextColor(false);
+        asmContents.setWhitespaceVisible(false);
+        asmContentsScroll.setViewportView(asmContents);
         final JPanel panel2 = new JPanel();
         panel2.setLayout(new GridBagLayout());
         tabPane.addTab("Include Files", panel2);
@@ -155,18 +666,18 @@ public class MainGui
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridBagLayout());
         tabPane.addTab("Pre-processed", panel3);
-        final RTextScrollPane rTextScrollPane2 = new RTextScrollPane();
+        preTextScroll = new RTextScrollPane();
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
-        panel3.add(rTextScrollPane2, gbc);
+        panel3.add(preTextScroll, gbc);
         preText = new RSyntaxTextArea();
         preText.setEditable(false);
         preText.setEnabled(true);
-        rTextScrollPane2.setViewportView(preText);
+        preTextScroll.setViewportView(preText);
         final JPanel panel4 = new JPanel();
         panel4.setLayout(new GridBagLayout());
         tabPane.addTab("Components", panel4);
@@ -288,540 +799,4 @@ public class MainGui
     {
         return root;
     }
-
-    private class UploadRunnable implements Runnable
-    {
-        public boolean running;
-
-        @Override
-        public void run()
-        {
-            running = true;
-            try
-            {
-                if (!PROPERTIES.containsKey(UPLOADCMD)) return;
-                File file = new File(Main.srcFile.getParentFile(), FilenameUtils.getBaseName(Main.srcFile.getName()) + ".hex");
-                StringTokenizer st = new StringTokenizer(PROPERTIES.getProperty(UPLOADCMD).replace("$filename", "\"" + file.getAbsolutePath() + "\""));
-                String[] cmdarray = new String[st.countTokens()];
-                for (int i = 0; st.hasMoreTokens(); i++) cmdarray[i] = st.nextToken();
-                Process process = new ProcessBuilder(cmdarray).inheritIO().start();
-                if (process.waitFor() != 0) JOptionPane.showMessageDialog(frame, "Upload process didn't exit with 0, but with " + process.exitValue(), "Upload error.", JOptionPane.ERROR_MESSAGE);
-            }
-            catch (Exception ex)
-            {
-                ex.printStackTrace();
-            }
-            running = false;
-        }
-    }
-
-    private class CompileRunnable implements Runnable
-    {
-        public boolean running;
-
-        @Override
-        public void run()
-        {
-            running = true;
-            try
-            {
-                status.setText("Compiling...");
-                System.gc();
-
-                final Compiler compiler = new Compiler(asmContents.getText());
-
-                while (compiler.hasWork())
-                {
-                    compiler.doWork();
-                    status.setText(Helper.capitalize(compiler.getStage().name()));
-                    switch (compiler.getStage())
-                    {
-                        case PREPROCESSOR:
-                            preText.setText(compiler.src);
-                            for (int i = 0; i < includeFiles.getTabCount(); i++) includeFiles.remove(i);
-                            for (String file : compiler.includeFiles.keySet())
-                            {
-                                GridBagConstraints gbc = new GridBagConstraints();
-                                gbc.gridx = 0;
-                                gbc.gridy = 0;
-                                gbc.weightx = 1.0;
-                                gbc.weighty = 1.0;
-                                gbc.fill = GridBagConstraints.BOTH;
-                                RTextScrollPane rTextScrollPane1 = new RTextScrollPane();
-                                rTextScrollPane1.setName(file);
-                                rTextScrollPane1.setBorder(BorderFactory.createTitledBorder("Source"));
-                                RSyntaxTextArea text = new RSyntaxTextArea(compiler.includeFiles.get(file));
-                                text.setFadeCurrentLineHighlight(false);
-                                text.setTabsEmulated(false);
-                                text.setEditable(false);
-                                text.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
-                                text.setFont(fontChooser.getSelectedFont());
-                                text.setSyntaxEditingStyle("text/8051");
-                                rTextScrollPane1.setViewportView(text);
-                                includeFiles.add(rTextScrollPane1, gbc);
-                            }
-                            break;
-                        case MAKE_HEX:
-                            hexTable.setModel(new DefaultTableModel(compiler.getHexTable(), new String[]{"Address    ", "0x.0", "0x.1", "0x.2", "0x.3", "0x.4", "0x.5", "0x.6", "0x.7", "0x.8", "0x.9", "0x.A", "0x.B", "0x.C", "0x.D", "0x.E", "0x.F"}));
-                            resizeColumnWidth(hexTable);
-                            hexTable.updateUI();
-                            break;
-                        default:
-                            symbolsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)", "Value (String)"}));
-                            resizeColumnWidth(symbolsTable);
-                            symbolsTable.updateUI();
-
-                            componentsTable.setModel(new DefaultTableModel(compiler.getComponents(), new String[]{"Start", "End", "Type", "SubType", "Contents", "Address", "Bytes"}));
-                            resizeColumnWidth(componentsTable);
-                            componentsTable.updateUI();
-                            break;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                if (e instanceof CompileException)
-                {
-                    preText.select(((CompileException) e).component.getSrcStart(), ((CompileException) e).component.getSrcEnd());
-                }
-                e.printStackTrace();
-                status.setText(e.getClass().getSimpleName() + ": " + e.getMessage());
-            }
-            running = false;
-        }
-    }
-
-    private MainGui()
-    {
-        $$$setupUI$$$();
-        AbstractTokenMakerFactory atmf = (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
-        atmf.putMapping("text/8051", Assembler8051TokenMaker.class.getName());
-
-        asmContents.setSyntaxEditingStyle("text/8051");
-        preText.setSyntaxEditingStyle("text/8051");
-
-        fontChooser.setSelectedFontFamily(PROPERTIES.getProperty(FONT_NAME, "Courier New"));
-        fontChooser.setSelectedFontStyle(Integer.parseInt(PROPERTIES.getProperty(FONT_STYLE, Integer.toString(Font.PLAIN))));
-        fontChooser.setSelectedFontSize(Integer.parseInt(PROPERTIES.getProperty(FONT_SIZE, "12")));
-
-        asmContents.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
-        asmContents.setFont(fontChooser.getSelectedFont());
-
-        preText.setTabSize(Integer.parseInt(PROPERTIES.getProperty(TABSIZE, "4")));
-        preText.setFont(fontChooser.getSelectedFont());
-
-        // DEBUG todo
-        componentsTable.setDefaultRenderer(Object.class, new FluoCellRenderer()
-        {
-            @Override
-            public boolean highlight(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
-            {
-                return value.equals("UnsolvedComponent");
-            }
-        });
-        hexTable.setDefaultRenderer(Object.class, new FluoCellRenderer()
-        {
-            @Override
-            public boolean highlight(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
-            {
-                return value.toString().length() > 2 && column != 0;
-            }
-        });
-        symbolsTable.setDefaultRenderer(Object.class, new FluoCellRenderer()
-        {
-            @Override
-            public boolean highlight(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
-            {
-                return value.toString().equals("_UNDEFINED_");
-            }
-        });
-
-        // Main gui init
-        frame = new JFrame("j8051");
-        frame.setContentPane(this.$$$getRootComponent$$$());
-        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
-        frame.setJMenuBar(menuBar);
-        frame.pack();
-        frame.setLocation(parseInt(PROPERTIES.getProperty(WINDOW_X, "0")), parseInt(PROPERTIES.getProperty(WINDOW_Y, "0")));
-        frame.setSize(parseInt(PROPERTIES.getProperty(WINDOW_W, "740")), parseInt(PROPERTIES.getProperty(WINDOW_H, "760")));
-        frame.setVisible(true);
-        try
-        {
-            for (String res : new String[]{"1024", "512", "256", "128"})
-            {
-                ArrayList<Image> imageList = new ArrayList<>();
-                URL url = getClass().getResource("/icon/j8051-" + res + ".png");
-                if (url == null) continue;
-                imageList.add(Toolkit.getDefaultToolkit().getImage(url));
-                frame.setIconImages(imageList);
-            }
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-        frame.addComponentListener(new ComponentListener()
-        {
-            @Override
-            public void componentResized(ComponentEvent e)
-            {
-                PROPERTIES.setProperty(WINDOW_W, Integer.toString(e.getComponent().getWidth()));
-                PROPERTIES.setProperty(WINDOW_H, Integer.toString(e.getComponent().getHeight()));
-            }
-
-            @Override
-            public void componentMoved(ComponentEvent e)
-            {
-                PROPERTIES.setProperty(WINDOW_X, Integer.toString(e.getComponent().getX()));
-                PROPERTIES.setProperty(WINDOW_Y, Integer.toString(e.getComponent().getY()));
-            }
-
-            @Override
-            public void componentShown(ComponentEvent e)
-            {
-            }
-
-            @Override
-            public void componentHidden(ComponentEvent e)
-            {
-            }
-        });
-        frame.addWindowListener(new WindowAdapter()
-        {
-            @Override
-            public void windowClosed(WindowEvent e)
-            {
-                super.windowClosed(e);
-                //fileWatcher.interrupt();
-            }
-        });
-        loadFile.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION)
-                {
-                    File file = fileChooser.getSelectedFile();
-                    Main.setSrcFile(file);
-                    changeFile();
-                }
-            }
-        });
-        compile.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                MAIN_GUI.compile();
-            }
-        });
-        compileButton.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                MAIN_GUI.compile();
-            }
-        });
-        saveButton.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                saveChanges();
-            }
-        });
-        saveFile.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                saveChanges();
-            }
-        });
-        uploadButton.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                upload();
-            }
-        });
-        changeFont.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                if (JFontChooser.OK_OPTION == fontChooser.showDialog(frame))
-                {
-                    asmContents.setFont(fontChooser.getSelectedFont());
-                    PROPERTIES.setProperty(FONT_NAME, fontChooser.getSelectedFontFamily());
-                    PROPERTIES.setProperty(FONT_SIZE, Integer.toString(fontChooser.getSelectedFontSize()));
-                    PROPERTIES.setProperty(FONT_STYLE, Integer.toString(fontChooser.getSelectedFontStyle()));
-                }
-            }
-        });
-        autoCompile.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                PROPERTIES.setProperty(AUTO_COMPILE, Boolean.toString(autoCompile.getState()));
-            }
-        });
-        autoSave.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                PROPERTIES.setProperty(AUTO_SAVE, Boolean.toString(autoSave.getState()));
-            }
-        });
-        changeTabSize.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                try
-                {
-                    int i = Integer.parseInt(JOptionPane.showInputDialog(frame, "Tab size?", "Tab size", JOptionPane.QUESTION_MESSAGE));
-                    PROPERTIES.setProperty(TABSIZE, Integer.toString(i));
-                    asmContents.setTabSize(i);
-                }
-                catch (NumberFormatException ex)
-                {
-                    ex.printStackTrace();
-                }
-            }
-        });
-        uploadCommand.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                try
-                {
-                    String cmd = (String) JOptionPane.showInputDialog(frame, "Upload command? Use '$filename' as replacement for the .hex file.", "Upload command", JOptionPane.QUESTION_MESSAGE, null, null, PROPERTIES.getProperty(UPLOADCMD));
-                    if (cmd != null) PROPERTIES.setProperty(UPLOADCMD, cmd);
-                }
-                catch (NumberFormatException ex)
-                {
-                    ex.printStackTrace();
-                }
-            }
-        });
-        includeFolder.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                if (folderChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION)
-                {
-                    Main.setIncludeFolder(folderChooser.getSelectedFile());
-                }
-            }
-        });
-        encodingDefault.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                PROPERTIES.setProperty(ENCODING, ENCODING_DEFAULT);
-                changeFile();
-            }
-        });
-        encodingAnsi.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                PROPERTIES.setProperty(ENCODING, ENCODING_ANSI);
-                changeFile();
-            }
-        });
-        encodingUtf8.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                PROPERTIES.setProperty(ENCODING, ENCODING_UTF8);
-                changeFile();
-            }
-        });
-    }
-
-    public void init()
-    {
-        changeFile();
-        compile();
-        asmContents.getDocument().addDocumentListener(DOCUMENT_LISTENER);
-
-        if (PROPERTIES.containsKey(SRC_FILE))
-        {
-            File file = new File(PROPERTIES.getProperty(SRC_FILE));
-            if (file.exists()) fileChooser.setSelectedFile(file);
-        }
-    }
-
-    public void changeFile()
-    {
-        if (Main.srcFile != null) frame.setTitle(String.format("j8051 - %s", Main.srcFile.getAbsolutePath()));
-        asmContents.setEditable(Main.srcFile != null);
-        setAsmContents();
-    }
-
-    public void setAsmContents()
-    {
-        AsmDocumentListener.DOCUMENT_LISTENER.active = false;
-        Document document = asmContents.getDocument();
-        try
-        {
-            document.remove(0, document.getLength());
-            if (Main.srcFile != null)
-            {
-                document.insertString(0, FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT)).replace("\r", ""), null);
-            }
-        }
-        catch (BadLocationException | IOException e1)
-        {
-            e1.printStackTrace();
-        }
-        AsmDocumentListener.DOCUMENT_LISTENER.active = true;
-    }
-
-    public void upload()
-    {
-        if (!uploadRunnable.running) new Thread(uploadRunnable).start();
-    }
-
-    public void compile()
-    {
-        if (!compileRunnable.running) new Thread(compileRunnable).start();
-    }
-
-    public void resizeColumnWidth(JTable table)
-    {
-        final TableColumnModel columnModel = table.getColumnModel();
-        for (int column = 0; column < table.getColumnCount(); column++)
-        {
-            int width = 50; // Min width
-            for (int row = 0; row < table.getRowCount(); row++)
-            {
-                TableCellRenderer renderer = table.getCellRenderer(row, column);
-                Component comp = table.prepareRenderer(renderer, row, column);
-                width = Math.max(comp.getPreferredSize().width, width);
-            }
-            columnModel.getColumn(column).setPreferredWidth(width);
-        }
-    }
-
-    private void createUIComponents()
-    {
-        // Filechooser specifications
-        fileChooser.addChoosableFileFilter(ASM_FILE_FILTER);
-        fileChooser.setFileHidingEnabled(true);
-        fileChooser.setMultiSelectionEnabled(false);
-        fileChooser.setFileFilter(ASM_FILE_FILTER);
-
-        // Folderchooser specifications
-        folderChooser.addChoosableFileFilter(FOLDER_FILTER);
-        folderChooser.setFileHidingEnabled(true);
-        folderChooser.setMultiSelectionEnabled(false);
-        folderChooser.setFileSelectionMode(DIRECTORIES_ONLY);
-        folderChooser.setFileFilter(FOLDER_FILTER);
-
-        //Menubar
-        menuBar = new JMenuBar();
-        //  Filemenu
-        JMenu fileMenu = new JMenu("File");
-
-        loadFile = new JMenuItem("Open...");
-        fileMenu.add(loadFile);
-
-        saveFile = new JMenuItem("Save");
-        fileMenu.add(saveFile);
-
-        fileMenu.addSeparator();
-
-        compile = new JMenuItem("Compile");
-        fileMenu.add(compile);
-
-        // Encoding menu, under file menu
-        JMenu encoding = new JMenu("Encoding");
-        fileMenu.add(encoding);
-
-        ButtonGroup buttonGroup = new ButtonGroup();
-
-        encodingDefault = new JRadioButtonMenuItem("Platform/Java default");
-        if (String.valueOf(PROPERTIES.getProperty(ENCODING)).equals(ENCODING_DEFAULT)) encodingDefault.setSelected(true);
-        buttonGroup.add(encodingDefault);
-        encoding.add(encodingDefault);
-
-        encodingUtf8 = new JRadioButtonMenuItem("UTF-8");
-        if (String.valueOf(PROPERTIES.getProperty(ENCODING)).equals(ENCODING_UTF8)) encodingUtf8.setSelected(true);
-        buttonGroup.add(encodingUtf8);
-        encoding.add(encodingUtf8);
-
-        encodingAnsi = new JRadioButtonMenuItem("ANSI");
-        if (String.valueOf(PROPERTIES.getProperty(ENCODING)).equals(ENCODING_ANSI)) encodingAnsi.setSelected(true);
-        buttonGroup.add(encodingAnsi);
-        encoding.add(encodingAnsi);
-
-        menuBar.add(fileMenu);
-        //  Viewmenu
-        JMenu viewMenu = new JMenu("View");
-
-        changeFont = new JMenuItem("Font...");
-        viewMenu.add(changeFont);
-
-        changeTabSize = new JMenuItem("Tab size...");
-        viewMenu.add(changeTabSize);
-
-        menuBar.add(viewMenu);
-
-        //  optionsmenu
-        JMenu optionsMenu = new JMenu("Options");
-
-        includeFolder = new JMenuItem("Include folder...");
-        optionsMenu.add(includeFolder);
-
-        uploadCommand = new JMenuItem("Upload command...");
-        optionsMenu.add(uploadCommand);
-
-        optionsMenu.addSeparator();
-
-        autoSave = new JCheckBoxMenuItem("Auto save");
-        autoSave.setState(parseBoolean(PROPERTIES.getProperty(AUTO_SAVE, "true")));
-        optionsMenu.add(autoSave);
-
-        autoCompile = new JCheckBoxMenuItem("Auto compile");
-        autoCompile.setState(parseBoolean(PROPERTIES.getProperty(AUTO_COMPILE, "true")));
-        optionsMenu.add(autoCompile);
-
-        menuBar.add(optionsMenu);
-    }
-
-    public boolean isAutoCompiling()
-    {
-        return autoCompile.getState();
-    }
-
-    public boolean isAutoSaving()
-    {
-        return autoSave.getState();
-    }
-
-    public void saveChanges()
-    {
-        try
-        {
-            FileUtils.writeStringToFile(Main.srcFile, asmContents.getDocument().getText(0, asmContents.getDocument().getLength()), PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT));
-        }
-        catch (IOException | BadLocationException e1)
-        {
-            e1.printStackTrace();
-        }
-    }
-
 }

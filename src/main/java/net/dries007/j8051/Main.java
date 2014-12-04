@@ -110,6 +110,7 @@ public class Main
         Main.srcFile = srcFile;
         PROPERTIES.setProperty(SRC_FILE, srcFile == null ? "" : srcFile.getAbsolutePath());
         if (includeFile == null) includeFile = Main.srcFile.getParentFile();
+        saveProperties();
     }
 
     public static void setIncludeFolder(File includeFile)
@@ -117,5 +118,6 @@ public class Main
         if (!includeFile.exists() || !includeFile.isDirectory()) includeFile = null;
         Main.includeFile = includeFile;
         PROPERTIES.setProperty(INCLUDEDIR, includeFile == null ? "" : includeFile.getAbsolutePath());
+        saveProperties();
     }
 }

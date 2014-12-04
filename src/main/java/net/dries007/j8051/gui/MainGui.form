@@ -22,7 +22,7 @@
             <properties/>
             <border type="none"/>
             <children>
-              <scrollpane id="cba6e" class="org.fife.ui.rtextarea.RTextScrollPane">
+              <scrollpane id="cba6e" class="org.fife.ui.rtextarea.RTextScrollPane" binding="asmContentsScroll">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
                   <gridbag weightx="1.0" weighty="1.0"/>
@@ -33,9 +33,16 @@
                   <component id="94f4a" class="org.fife.ui.rsyntaxtextarea.RSyntaxTextArea" binding="asmContents">
                     <constraints/>
                     <properties>
-                      <fadeCurrentLineHighlight value="false"/>
-                      <tabsEmulated value="false"/>
+                      <EOLMarkersVisible value="false"/>
+                      <codeFoldingEnabled value="false"/>
+                      <fadeCurrentLineHighlight value="true"/>
+                      <fractionalFontMetricsEnabled value="false"/>
+                      <paintTabLines value="true"/>
+                      <roundedSelectionEdges value="false"/>
+                      <tabsEmulated value="true"/>
                       <text value=""/>
+                      <useSelectedTextColor value="false"/>
+                      <whitespaceVisible value="false"/>
                     </properties>
                   </component>
                 </children>
@@ -69,7 +76,7 @@
             <properties/>
             <border type="none"/>
             <children>
-              <scrollpane id="7f53e" class="org.fife.ui.rtextarea.RTextScrollPane">
+              <scrollpane id="7f53e" class="org.fife.ui.rtextarea.RTextScrollPane" binding="preTextScroll">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
                   <gridbag weightx="1.0" weighty="1.0"/>

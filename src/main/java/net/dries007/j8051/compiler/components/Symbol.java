@@ -53,16 +53,16 @@ public class Symbol extends Component
     public       Integer intValue;
     public       String  stringValue;
 
-    private Symbol(int startOffset, Matcher matcher, Type type)
+    private Symbol(int srcLine, Matcher matcher, Type type)
     {
-        super(matcher.start() + startOffset, matcher.end() + startOffset);
+        super(srcLine);
         this.type = type;
         this.key = matcher.groupCount() >= 1 ? matcher.group(1) : null;
     }
 
     public Symbol()
     {
-        super(-1, -1);
+        super(-1);
         this.key = "$";
         this.type = null;
     }
@@ -83,18 +83,17 @@ public class Symbol extends Component
                     if (!matcher.find()) continue;
                     i.remove();
 
-                    SrcComponent pre = new SrcComponent(component.getSrcStart(), src.substring(0, matcher.start()));
+                    SrcComponent pre = new SrcComponent(component.getSrcLine(), src.substring(0, matcher.start()));
                     if (pre.shouldAdd()) i.add(pre);
 
-                    Symbol symbol = new Symbol(pre.getSrcEnd(), matcher, type);
+                    Symbol symbol = new Symbol(pre.getSrcLine(), matcher, type);
                     if (symbol.key != null)
                     {
                         if (symbols.containsKey(symbol.key.toLowerCase())) throw new SymbolAlreadyDefinedException(symbol, symbol.toString());
                         symbols.put(symbol.key.toLowerCase(), symbol);
                     }
                     i.add(symbol);
-
-                    SrcComponent post = new SrcComponent(symbol.getSrcEnd(), src.substring(matcher.end()));
+                    SrcComponent post = new SrcComponent(pre.getSrcLine(), src.substring(matcher.end()));
                     if (post.shouldAdd()) i.add(post);
                 }
             }
@@ -118,17 +117,13 @@ public class Symbol extends Component
             {
                 try
                 {
-                    ((Symbol) prev).intValue = ((Symbol) prev).type.evaluator.evaluate(((SrcComponent) current).contents.replaceAll("[\\r\\n]+", " "), symbols);
+                    ((Symbol) prev).intValue = ((Symbol) prev).type.evaluator.evaluate(((SrcComponent) current).contents, symbols);
                     ((Symbol) prev).stringValue = ((SrcComponent) current).contents;
                     i.remove();
                     if (((Symbol) prev).type.removeFromSrc())
                     {
                         i.previous();
                         i.remove();
-                    }
-                    else
-                    {
-                        prev.setSrcEnd(current.getSrcEnd());
                     }
                     resolvedAny = true;
                 }

@@ -32,6 +32,8 @@
 package net.dries007.j8051.compiler;
 
 import net.dries007.j8051.Main;
+import net.dries007.j8051.compiler.components.Component;
+import net.dries007.j8051.compiler.components.SrcComponent;
 import net.dries007.j8051.util.exceptions.IncludeException;
 import net.dries007.j8051.util.exceptions.PreprocessorException;
 import org.apache.commons.io.FileUtils;
@@ -58,26 +60,26 @@ public class Preprocessor
     {
     }
 
-    public static String process(String srcText, HashMap<String, String> includeFiles) throws PreprocessorException, IOException
+    public static void process(LinkedList<Component> components, String srcText, HashMap<String, String> includeFiles) throws PreprocessorException, IOException
     {
         Matcher matcher;
-        LinkedList<String> lines = new LinkedList<>();
-        for (String line : srcText.split("[\\r\\n]+"))
+        String[] split = srcText.split("\\n");
+        for (int i = 0; i < split.length; i++)
         {
-            int comment = line.indexOf(PREFIX_COMMENT);
-            line = (comment == -1 ? line : line.substring(0, comment)).replaceAll("^\\s+|\\s+$", "");
-            if (!line.isEmpty()) lines.add(line);
+            int comment = split[i].indexOf(PREFIX_COMMENT);
+            if (comment != -1) split[i] = split[i].substring(0, comment);
+            split[i] = split[i].trim();
+            if (!split[i].isEmpty()) components.add(new SrcComponent(i, split[i]));
         }
 
         HashMap<String, Macro> symbols = new HashMap<>();
         LinkedList<Boolean> ifList = new LinkedList<>();
 
-        StringBuilder out = new StringBuilder(srcText.length());
-
-        ListIterator<String> i = lines.listIterator();
+        ListIterator<Component> i = components.listIterator();
         while (i.hasNext())
         {
-            String src = i.next();
+            String src = ((SrcComponent) i.next()).contents;
+            if (src.isEmpty()) continue;
             if (src.charAt(0) == PREFIX_PRECOMPILER) // Initial check is fast
             {
                 matcher = INCLUDE_A.matcher(src);
@@ -96,10 +98,14 @@ public class Preprocessor
                 }
             }
         }
-        i = lines.listIterator();
+        i = components.listIterator();
         while (i.hasNext())
         {
-            String src = i.next();
+            SrcComponent component = (SrcComponent) i.next();
+            i.remove();
+            final int line = component.getSrcLine();
+            String src = component.contents;
+            if (src.isEmpty()) continue;
             if (src.charAt(0) == PREFIX_PRECOMPILER) // Initial check is fast
             {
                 matcher = DEFINE.matcher(src);
@@ -154,9 +160,8 @@ public class Preprocessor
                     }
                 }
             } while (changes);
-            out.append(replaceAcsii(src)).append('\n');
+            i.add(new SrcComponent(line, replaceAcsii(src)));
         }
-        return out.toString();
     }
 
     private static String replaceAcsii(String src)
@@ -180,15 +185,17 @@ public class Preprocessor
         return src;
     }
 
-    private static void include(ListIterator<String> i, File file, HashMap<String, String> includeFiles) throws IncludeException, IOException
+    private static void include(ListIterator<Component> components, File file, HashMap<String, String> includeFiles) throws IncludeException, IOException
     {
-        String text = FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT));
-        includeFiles.put(FilenameUtils.getBaseName(file.getName()), text.replaceAll("\\r\\n", "\n"));
-        for (String line : text.split("[\\r\\n]+"))
+        String text = FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT)).replaceAll("\\r\\n", "\n");
+        includeFiles.put(FilenameUtils.getBaseName(file.getName()), text);
+        String split[] = text.split("\\n");
+        for (int i = 0; i < split.length; i++)
         {
-            int comment = line.indexOf(PREFIX_COMMENT);
-            line = (comment == -1 ? line : line.substring(0, comment)).replaceAll("^\\s+|\\s+$", "");
-            if (!line.isEmpty()) i.add(line);
+            int comment = split[i].indexOf(PREFIX_COMMENT);
+            if (comment != -1) split[i] = split[i].substring(0, comment);
+            split[i] = split[i].trim();
+            if (!split[i].isEmpty()) components.add(new SrcComponent(i, split[i]));
         }
     }
 
@@ -204,7 +211,7 @@ public class Preprocessor
         private String   text;
         private Pattern  pattern;
 
-        public Macro(Matcher matcher, ListIterator<String> iterator)
+        public Macro(Matcher matcher, ListIterator<Component> iterator)
         {
             name = matcher.group(1);
             args = matcher.group(2) != null ? matcher.group(2).split(", ?") : null;

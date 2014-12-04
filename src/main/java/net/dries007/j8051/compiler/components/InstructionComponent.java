@@ -49,9 +49,9 @@ public class InstructionComponent extends Component
     public       Instruction      instruction;
     private      Object[]         objects;
 
-    private InstructionComponent(int startOffset, Matcher matcher, Instruction.Type type)
+    private InstructionComponent(int srcLine, Matcher matcher, Instruction.Type type)
     {
-        super(matcher.start() + startOffset, matcher.end() + startOffset);
+        super(srcLine);
         this.type = type;
         if (Instruction.SIMPLE_INSTRUCTIONS.containsKey(type)) instruction = Instruction.SIMPLE_INSTRUCTIONS.get(type);
     }
@@ -77,7 +77,6 @@ public class InstructionComponent extends Component
                         if (instructionComponent.matches(symbols, instruction, arguments))
                         {
                             i.remove();
-                            prev.setSrcEnd(current.getSrcEnd());
                             break;
                         }
                     }
@@ -103,13 +102,13 @@ public class InstructionComponent extends Component
                     if (!matcher.find()) continue;
                     i.remove();
 
-                    SrcComponent pre = new SrcComponent(component.getSrcStart(), src.substring(0, matcher.start()));
+                    SrcComponent pre = new SrcComponent(component.getSrcLine(), src.substring(0, matcher.start()));
                     if (pre.shouldAdd()) i.add(pre);
 
-                    InstructionComponent instructionComponent = new InstructionComponent(pre.getSrcEnd(), matcher, type);
+                    InstructionComponent instructionComponent = new InstructionComponent(pre.getSrcLine(), matcher, type);
                     i.add(instructionComponent);
 
-                    SrcComponent post = new SrcComponent(instructionComponent.getSrcEnd(), src.substring(matcher.end()));
+                    SrcComponent post = new SrcComponent(pre.getSrcLine(), src.substring(matcher.end()));
                     if (post.shouldAdd()) i.add(post);
                 }
             }

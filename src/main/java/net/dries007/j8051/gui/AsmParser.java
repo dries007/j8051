@@ -29,65 +29,29 @@
  *
  */
 
-package net.dries007.j8051.compiler.components;
+package net.dries007.j8051.gui;
 
-import net.dries007.j8051.util.Helper;
-import net.dries007.j8051.util.exceptions.CompileException;
-import net.dries007.j8051.util.exceptions.SymbolUndefinedException;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.fife.ui.rsyntaxtextarea.RSyntaxDocument;
+import org.fife.ui.rsyntaxtextarea.parser.AbstractParser;
+import org.fife.ui.rsyntaxtextarea.parser.DefaultParseResult;
+import org.fife.ui.rsyntaxtextarea.parser.ParseResult;
 
 /**
  * @author Dries007
  */
-public abstract class Component
+public class AsmParser extends AbstractParser
 {
-    public    int     address;
-    protected int[]   data;
-    private   int     srcLine;
-    private   boolean resolved;
+    public static final AsmParser ASM_PARSER = new AsmParser();
+    public final DefaultParseResult result;
 
-    protected Component(int srcLine)
+    private AsmParser()
     {
-        this.srcLine = srcLine;
+        result = new DefaultParseResult(this);
     }
 
-    public Object[] getDebug()
+    @Override
+    public ParseResult parse(RSyntaxDocument doc, String style)
     {
-        return new Object[]{getSrcLine(), this.getClass().getSimpleName().replace("Component", ""), getSubType(), getContents(), String.format("0x%04X", address), Helper.toHexString(getData())};
-    }
-
-    protected abstract Object getContents();
-
-    protected abstract Object getSubType();
-
-    public abstract Integer getSize(Map<String, Symbol> symbols);
-
-    public boolean isResolved()
-    {
-        return resolved;
-    }
-
-    public int[] getData()
-    {
-        return data;
-    }
-
-    public abstract void tryResolve(int currentLocation, HashMap<String, Symbol> symbols) throws SymbolUndefinedException, CompileException;
-
-    public void setResolved(boolean resolved)
-    {
-        this.resolved = resolved;
-    }
-
-    public int getSrcLine()
-    {
-        return srcLine;
-    }
-
-    public void setSrcLine(int srcLine)
-    {
-        this.srcLine = srcLine;
+        return result;
     }
 }

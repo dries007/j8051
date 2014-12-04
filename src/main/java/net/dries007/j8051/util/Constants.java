@@ -71,6 +71,7 @@ public class Constants
     public static final String TABSIZE            = "tabSize";
     public static final String INCLUDEDIR         = "includedir";
     public static final String UPLOADCMD          = "uploadCmd";
+    public static final String SYNTAX_NAME        = "text/8051";
     /*
      * Prefixes
      */
@@ -129,18 +130,23 @@ public class Constants
             @Override
             public void run()
             {
-                try
-                {
-                    File settings = new File(SETTINGS_FILENAME);
-                    if (!settings.exists()) settings.createNewFile();
-                    PROPERTIES.store(new FileWriter(settings), SETTINGS_COMMENT);
-                }
-                catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
+                saveProperties();
             }
         }));
+    }
+
+    public static void saveProperties()
+    {
+        try
+        {
+            File settings = new File(SETTINGS_FILENAME);
+            if (!settings.exists()) settings.createNewFile();
+            PROPERTIES.store(new FileWriter(settings), SETTINGS_COMMENT);
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
     }
 
     public static final FileFilter ASM_FILE_FILTER = new FileFilter()

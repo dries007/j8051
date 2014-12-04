@@ -82,7 +82,7 @@ public class AsmDocumentListener implements DocumentListener
         @Override
         public void run()
         {
-            DOCUMENT_LISTENER.count --;
+            DOCUMENT_LISTENER.count--;
             if (DOCUMENT_LISTENER.count != 0) return;
 
             if (MainGui.MAIN_GUI.isAutoSaving()) MainGui.MAIN_GUI.saveChanges();

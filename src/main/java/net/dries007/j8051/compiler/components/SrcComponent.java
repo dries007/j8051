@@ -43,9 +43,9 @@ public class SrcComponent extends Component
 {
     public final String contents;
 
-    public SrcComponent(int startOffset, String contents)
+    public SrcComponent(int srcLine, String contents)
     {
-        super(startOffset, startOffset + contents.length());
+        super(srcLine);
         this.contents = contents.trim();
     }
 
@@ -57,7 +57,7 @@ public class SrcComponent extends Component
 
     public boolean shouldAdd()
     {
-        return getSrcEnd() != getSrcStart();
+        return !this.contents.isEmpty();
     }
 
     @Override
