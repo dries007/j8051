@@ -58,6 +58,10 @@ public class Constants
     public static final String WINDOW_W           = "window.w";
     public static final String WINDOW_X           = "window.x";
     public static final String WINDOW_Y           = "window.y";
+    public static final String FIND_X             = "find.x";
+    public static final String FIND_Y             = "find.y";
+    public static final String FIND_ALWAYSONTOP   = "find.alwaysOnTop";
+    public static final String FIND_IGNORECASE    = "find.ignoreCase";
     public static final String AUTO_LOAD          = "auto.load";
     public static final String AUTO_COMPILE       = "auto.compile";
     public static final String AUTO_SAVE          = "auto.save";
@@ -160,7 +164,7 @@ public class Constants
         @Override
         public String getDescription()
         {
-            return "*.asm | ASM text fimes";
+            return "*.asm | ASM text files";
         }
     };
 

@@ -228,7 +228,7 @@
                   <gridbag weightx="0.0" weighty="0.0"/>
                 </constraints>
                 <properties>
-                  <icon value="icon/burn--arrow.png"/>
+                  <icon value="icon/upload.png"/>
                   <text value=""/>
                   <toolTipText value="Upload (F6)"/>
                 </properties>
@@ -255,9 +255,19 @@
                   <toolTipText value="Compile (F5)"/>
                 </properties>
               </component>
-              <hspacer id="a961f">
+              <component id="b1f9c" class="javax.swing.JButton" binding="findButton">
                 <constraints>
-                  <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                  <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                  <gridbag weightx="0.0" weighty="0.0"/>
+                </constraints>
+                <properties>
+                  <icon value="icon/search.png"/>
+                  <text value=""/>
+                </properties>
+              </component>
+              <hspacer id="2e54b">
+                <constraints>
+                  <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                   <gridbag weightx="1.0" weighty="0.0"/>
                 </constraints>
               </hspacer>

@@ -32,6 +32,7 @@
 package net.dries007.j8051.gui;
 
 import net.dries007.j8051.compiler.Compiler;
+import net.dries007.j8051.compiler.components.Symbol;
 import net.dries007.j8051.util.Helper;
 import net.dries007.j8051.util.exceptions.CompileException;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -43,6 +44,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 
+import static net.dries007.j8051.gui.AsmParser.ASM_PARSER;
 import static net.dries007.j8051.gui.MainGui.MAIN_GUI;
 import static net.dries007.j8051.util.Constants.*;
 
@@ -56,8 +58,8 @@ class CompileRunnable implements Runnable
     @Override
     public void run()
     {
-        running = true;
         AsmParser.ASM_PARSER.result.clearNotices();
+        running = true;
         try
         {
             MAIN_GUI.status.setText("Compiling...");

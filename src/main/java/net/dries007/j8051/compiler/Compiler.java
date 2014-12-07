@@ -40,10 +40,7 @@ import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.ListIterator;
+import java.util.*;
 
 import static net.dries007.j8051.util.Constants.*;
 
@@ -54,12 +51,13 @@ public class Compiler
 {
     public final Symbol                  currentLocation = new Symbol();
     public final LinkedList<Component>   components      = new LinkedList<>();
+    public final LinkedList<Section>     sections        = new LinkedList<>();
     public final HashMap<String, Symbol> symbols         = new HashMap<>();
-    public final HashMap<String, String> includeFiles    = new HashMap<>();
-    private final String src;
-    public        String postPre;
-    public  Integer[] hex   = new Integer[0];
-    private Stage     stage = Stage.INIT;
+    public final LinkedHashMap <String, String> includeFiles    = new LinkedHashMap<>();
+    public final String src;
+    public       String postPre;
+
+    private Stage stage = Stage.INIT;
 
     public Compiler(String src)
     {
@@ -85,6 +83,7 @@ public class Compiler
         while (i.hasNext())
         {
             Component component = i.next();
+            if (component instanceof Symbol && ((Symbol) component).type == Symbol.Type.ORG) currentLocation.intValue = ((Symbol) component).intValue;
             component.address = currentLocation.intValue;
             if (component instanceof SrcComponent) throw new CompileException(component, "Unsolved src: " + ((SrcComponent) component).contents);
             if (!component.isResolved())
@@ -94,7 +93,7 @@ public class Compiler
                     component.tryResolve(currentLocation.intValue, symbols);
                     component.setResolved(true);
 
-                    if (component instanceof Symbol) i.remove();
+                    if (component instanceof Symbol && ((Symbol) component).type == Symbol.Type.LABEL) i.remove();
 
                     resolvedAny = true;
                 }
@@ -116,10 +115,7 @@ public class Compiler
     public Object[][] getComponents()
     {
         ArrayList<Object[]> data = new ArrayList<>(components.size());
-        for (Component component : components)
-        {
-            data.add(component.getDebug());
-        }
+        for (Component component : components) data.add(component.getDebug());
         return data.toArray(new Object[data.size()][]);
     }
 
@@ -136,18 +132,8 @@ public class Compiler
 
     public Object[][] getHexTable()
     {
-        ArrayList<String[]> data = new ArrayList<>(hex.length / 16);
-        for (int i = 0; i <= hex.length / 16; i++)
-        {
-            String[] line = new String[17];
-            line[0] = String.format("0x%02X - 0x%2X", i, i + 16);
-            for (int j = 0; j < 16; j++)
-            {
-                if (hex.length == (i * 16) + j) break;
-                line[1 + j] = String.format("%02X", hex[(i * 16) + j]);
-            }
-            data.add(line);
-        }
+        LinkedList<String[]> data = new LinkedList<>();
+        for (Section section : sections) section.addToHexTable(data);
         return data.toArray(new String[data.size()][]);
     }
 
@@ -156,22 +142,7 @@ public class Compiler
         File file = new File(Main.srcFile.getParentFile(), FilenameUtils.getBaseName(Main.srcFile.getName()) + ".hex");
         if (file.exists()) file.delete();
         LinkedList<String> lines = new LinkedList<>();
-        for (int i = 0; i <= hex.length / 0x20; i++)
-        {
-            final int length = Math.min(0x20, hex.length - 0x20 * i);
-            final int address = 0x20 * i;
-            int sum = length + (address & 0xFF) + (address >>> 8) + 0x00;
-            StringBuilder line = new StringBuilder(75); // 75 = normal line length
-            line.append(String.format(":%02X%04X00", length, address));
-            for (int j = 0; j < length; j++)
-            {
-                if (hex[address + j] > 0xFF) throw new CompileException("One byte can't be more then 0xFF.");
-                sum += hex[address + j];
-                line.append(String.format("%02X", hex[address + j]));
-            }
-            line.append(String.format("%02X", ((~sum) + 1) & 0xFF));
-            lines.add(line.toString());
-        }
+        for (Section section : sections) section.addToHexFile(lines);
         lines.add(":00000001FF");
         FileUtils.writeLines(file, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT), lines);
     }
@@ -195,9 +166,43 @@ public class Compiler
                     @Override
                     public void work(Compiler compiler) throws Exception
                     {
-                        LinkedList<Integer> hexList = new LinkedList<>();
-                        for (Component component : compiler.components) for (int b : component.getData()) hexList.add(b);
-                        compiler.hex = hexList.toArray(new Integer[hexList.size()]);
+                        int lastSize = -1;
+                        int lastStart = -1;
+                        Section currentSection = null;
+                        for (Component component : compiler.components)
+                        {
+                            if (component instanceof Symbol)
+                            {
+                                if (((Symbol) component).type == Symbol.Type.ORG)
+                                {
+                                    if (currentSection != null)
+                                    {
+                                        lastSize = currentSection.getSize();
+                                        compiler.sections.add(currentSection);
+                                    }
+
+                                    if (lastStart != -1 && lastStart + lastSize > ((Symbol) component).intValue) throw new CompileException(component, "Section overlap!");
+
+                                    currentSection = new Section(((Symbol) component).intValue);
+                                    lastStart = currentSection.startaddress;
+                                }
+                                else if (((Symbol) component).type == Symbol.Type.END)
+                                {
+                                    if (currentSection != null)
+                                    {
+                                        lastSize = currentSection.getSize();
+                                        compiler.sections.add(currentSection);
+                                    }
+                                    currentSection = null;
+                                }
+                            }
+                            else
+                            {
+                                if (currentSection == null) throw new CompileException(component, "Component doesn't belong to a code section.");
+                                currentSection.addData(component);
+                            }
+                        }
+                        if (currentSection != null) compiler.sections.add(currentSection);
                         compiler.makeHexFile();
                     }
                 },

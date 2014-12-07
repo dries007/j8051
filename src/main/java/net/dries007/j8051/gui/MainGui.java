@@ -36,8 +36,6 @@ import org.apache.commons.io.FileUtils;
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
-import org.fife.ui.rsyntaxtextarea.parser.DefaultParserNotice;
-import org.fife.ui.rsyntaxtextarea.parser.ParserNotice;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import javax.swing.*;
@@ -59,6 +57,7 @@ import static javax.swing.JFileChooser.DIRECTORIES_ONLY;
 import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
 import static net.dries007.j8051.gui.AsmDocumentListener.DOCUMENT_LISTENER;
 import static net.dries007.j8051.gui.AsmParser.ASM_PARSER;
+import static net.dries007.j8051.gui.FindAndReplace.FIND_AND_REPLACE;
 import static net.dries007.j8051.util.Constants.*;
 
 /**
@@ -91,13 +90,14 @@ public class MainGui
     public       JButton              saveButton;
     public       RTextScrollPane      asmContentsScroll;
     public       RTextScrollPane      preTextScroll;
-    public       JCheckBoxMenuItem    autoSave;
-    public       JCheckBoxMenuItem    autoCompile;
-    public       JMenuItem            includeFolder;
-    public       JRadioButtonMenuItem encodingDefault;
-    public       JRadioButtonMenuItem encodingUtf8;
-    public       JRadioButtonMenuItem encodingAnsi;
-    public       JMenuItem            uploadCommand;
+    public JButton              findButton;
+    public JCheckBoxMenuItem    autoSave;
+    public JCheckBoxMenuItem    autoCompile;
+    public JMenuItem            includeFolder;
+    public JRadioButtonMenuItem encodingDefault;
+    public JRadioButtonMenuItem encodingUtf8;
+    public JRadioButtonMenuItem encodingAnsi;
+    public JMenuItem            uploadCommand;
 
     public HashMap<String, Symbol> symbolHashMap;
 
@@ -177,7 +177,7 @@ public class MainGui
         {
             e.printStackTrace();
         }
-        frame.addComponentListener(new ComponentListener()
+        frame.addComponentListener(new ComponentAdapter()
         {
             @Override
             public void componentResized(ComponentEvent e)
@@ -193,25 +193,6 @@ public class MainGui
                 PROPERTIES.setProperty(WINDOW_X, Integer.toString(e.getComponent().getX()));
                 PROPERTIES.setProperty(WINDOW_Y, Integer.toString(e.getComponent().getY()));
                 saveProperties();
-            }
-
-            @Override
-            public void componentShown(ComponentEvent e)
-            {
-            }
-
-            @Override
-            public void componentHidden(ComponentEvent e)
-            {
-            }
-        });
-        frame.addWindowListener(new WindowAdapter()
-        {
-            @Override
-            public void windowClosed(WindowEvent e)
-            {
-                super.windowClosed(e);
-                //fileWatcher.interrupt();
             }
         });
         loadFile.addActionListener(new ActionListener()
@@ -406,29 +387,22 @@ public class MainGui
                 saveChanges();
             }
         });
-        symbolsTable.addMouseListener(new MouseAdapter()
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_R, KeyEvent.CTRL_DOWN_MASK), "find");
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_F, KeyEvent.CTRL_DOWN_MASK), "find");
+        root.getActionMap().put("find", new AbstractAction()
         {
-            //TODO: Do this automatically, and on all files (src + includes)
             @Override
-            public void mouseClicked(MouseEvent e)
+            public void actionPerformed(ActionEvent e)
             {
-                if (e.getClickCount() != 2) return;
-                if (symbolHashMap == null) return;
-                if (tabPane.getSelectedIndex() != 0) tabPane.setSelectedIndex(0);
-                try
-                {
-                    Symbol symbol = symbolHashMap.get(symbolsTable.getValueAt(symbolsTable.getSelectedRow(), 0).toString());
-                    DefaultParserNotice notice = new DefaultParserNotice(ASM_PARSER, symbol.key, symbol.getSrcLine());
-                    notice.setLevel(ParserNotice.Level.INFO);
-                    notice.setToolTipText(String.format("String: %s\nHex: %X\nDec: %d", symbol.stringValue, symbol.intValue, symbol.intValue));
-                    ASM_PARSER.result.addNotice(notice);
-                    asmContents.forceReparsing(ASM_PARSER);
-                    asmContents.scrollRectToVisible(new Rectangle(0, asmContents.yForLine(symbol.getSrcLine()), 10, 10));
-                }
-                catch (BadLocationException e1)
-                {
-                    e1.printStackTrace();
-                }
+                FIND_AND_REPLACE.setVisible(true);
+            }
+        });
+        findButton.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                FIND_AND_REPLACE.setVisible(true);
             }
         });
     }
@@ -757,7 +731,7 @@ public class MainGui
         panel7.setLayout(new GridBagLayout());
         toolBar1.add(panel7);
         uploadButton = new JButton();
-        uploadButton.setIcon(new ImageIcon(getClass().getResource("/icon/burn--arrow.png")));
+        uploadButton.setIcon(new ImageIcon(getClass().getResource("/icon/upload.png")));
         uploadButton.setText("");
         uploadButton.setToolTipText("Upload (F6)");
         gbc = new GridBagConstraints();
@@ -783,9 +757,17 @@ public class MainGui
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.WEST;
         panel7.add(compileButton, gbc);
-        final JPanel spacer1 = new JPanel();
+        findButton = new JButton();
+        findButton.setIcon(new ImageIcon(getClass().getResource("/icon/search.png")));
+        findButton.setText("");
         gbc = new GridBagConstraints();
         gbc.gridx = 3;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel7.add(findButton, gbc);
+        final JPanel spacer1 = new JPanel();
+        gbc = new GridBagConstraints();
+        gbc.gridx = 4;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;

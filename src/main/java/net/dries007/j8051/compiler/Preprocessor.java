@@ -41,9 +41,7 @@ import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.ListIterator;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,7 +58,7 @@ public class Preprocessor
     {
     }
 
-    public static void process(LinkedList<Component> components, String srcText, HashMap<String, String> includeFiles) throws PreprocessorException, IOException
+    public static void process(LinkedList<Component> components, String srcText, Map<String, String> includeFiles) throws PreprocessorException, IOException
     {
         Matcher matcher;
         String[] split = srcText.split("\\n");
@@ -185,7 +183,7 @@ public class Preprocessor
         return src;
     }
 
-    private static void include(ListIterator<Component> components, File file, HashMap<String, String> includeFiles) throws IncludeException, IOException
+    private static void include(ListIterator<Component> components, File file, Map<String, String> includeFiles) throws IncludeException, IOException
     {
         String text = FileUtils.readFileToString(file, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT)).replaceAll("\\r\\n", "\n");
         includeFiles.put(FilenameUtils.getBaseName(file.getName()), text);

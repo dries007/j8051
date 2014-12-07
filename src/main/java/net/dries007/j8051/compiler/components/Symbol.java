@@ -120,7 +120,7 @@ public class Symbol extends Component
                     ((Symbol) prev).intValue = ((Symbol) prev).type.evaluator.evaluate(((SrcComponent) current).contents, symbols);
                     ((Symbol) prev).stringValue = ((SrcComponent) current).contents;
                     i.remove();
-                    if (((Symbol) prev).type.removeFromSrc())
+                    if (((Symbol) prev).type.removeFromSrc)
                     {
                         i.previous();
                         i.remove();
@@ -191,11 +191,6 @@ public class Symbol extends Component
             this.pattern = pattern;
             this.evaluator = evaluator;
             this.evaluate = evaluate;
-        }
-
-        public boolean removeFromSrc()
-        {
-            return removeFromSrc;
         }
     }
 }
