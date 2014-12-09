@@ -62,6 +62,9 @@ public class Constants
     public static final String FIND_Y             = "find.y";
     public static final String FIND_ALWAYSONTOP   = "find.alwaysOnTop";
     public static final String FIND_IGNORECASE    = "find.ignoreCase";
+    public static final String FIND_REGEX         = "find.regex";
+    public static final String FIND_DOMAIN        = "find.domain";
+    public static final String FIND_OPACITY       = "find.opacity";
     public static final String AUTO_LOAD          = "auto.load";
     public static final String AUTO_COMPILE       = "auto.compile";
     public static final String AUTO_SAVE          = "auto.save";

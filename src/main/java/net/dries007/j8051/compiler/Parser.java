@@ -47,7 +47,7 @@ import static net.dries007.j8051.util.Constants.*;
 /**
  * @author Dries007
  */
-public class Compiler
+public class Parser
 {
     public final Symbol                  currentLocation = new Symbol();
     public final LinkedList<Component>   components      = new LinkedList<>();
@@ -59,7 +59,7 @@ public class Compiler
 
     private Stage stage = Stage.INIT;
 
-    public Compiler(String src)
+    public Parser(String src)
     {
         this.src = src.replaceAll("\\r\\n", "\n");
     }
@@ -157,19 +157,19 @@ public class Compiler
         DONE(null)
                 {
                     @Override
-                    public void work(Compiler compiler) throws Exception
+                    public void work(Parser parser) throws Exception
                     {
                     }
                 },
         MAKE_HEX(DONE)
                 {
                     @Override
-                    public void work(Compiler compiler) throws Exception
+                    public void work(Parser parser) throws Exception
                     {
                         int lastSize = -1;
                         int lastStart = -1;
                         Section currentSection = null;
-                        for (Component component : compiler.components)
+                        for (Component component : parser.components)
                         {
                             if (component instanceof Symbol)
                             {
@@ -178,7 +178,7 @@ public class Compiler
                                     if (currentSection != null)
                                     {
                                         lastSize = currentSection.getSize();
-                                        compiler.sections.add(currentSection);
+                                        parser.sections.add(currentSection);
                                     }
 
                                     if (lastStart != -1 && lastStart + lastSize > ((Symbol) component).intValue) throw new CompileException(component, "Section overlap!");
@@ -191,7 +191,7 @@ public class Compiler
                                     if (currentSection != null)
                                     {
                                         lastSize = currentSection.getSize();
-                                        compiler.sections.add(currentSection);
+                                        parser.sections.add(currentSection);
                                     }
                                     currentSection = null;
                                 }
@@ -202,76 +202,76 @@ public class Compiler
                                 currentSection.addData(component);
                             }
                         }
-                        if (currentSection != null) compiler.sections.add(currentSection);
-                        compiler.makeHexFile();
+                        if (currentSection != null) parser.sections.add(currentSection);
+                        parser.makeHexFile();
                     }
                 },
         RESOLVE_ALL(MAKE_HEX)
                 {
                     @Override
-                    public void work(Compiler compiler) throws Exception
+                    public void work(Parser parser) throws Exception
                     {
                         //noinspection StatementWithEmptyBody
-                        while (compiler.resolveAll()) ;
+                        while (parser.resolveAll()) ;
                     }
                 },
         RESOLVE_INSTRUCTIONS(RESOLVE_ALL)
                 {
                     @Override
-                    public void work(Compiler compiler) throws Exception
+                    public void work(Parser parser) throws Exception
                     {
-                        InstructionComponent.resolveInstructions(compiler.components, compiler.symbols);
+                        InstructionComponent.resolveInstructions(parser.components, parser.symbols);
                     }
                 },
         RESOLVE_SYMBOLS(RESOLVE_INSTRUCTIONS)
                 {
                     @Override
-                    public void work(Compiler compiler) throws Exception
+                    public void work(Parser parser) throws Exception
                     {
                         //noinspection StatementWithEmptyBody
-                        while (Symbol.resolveSymbols(compiler.components, compiler.symbols)) ;
+                        while (Symbol.resolveSymbols(parser.components, parser.symbols)) ;
                     }
                 },
         FIND_INSTRUCTIONS(RESOLVE_SYMBOLS)
                 {
                     @Override
-                    public void work(Compiler compiler) throws Exception
+                    public void work(Parser parser) throws Exception
                     {
-                        InstructionComponent.findInstructions(compiler.components);
+                        InstructionComponent.findInstructions(parser.components);
                     }
                 },
         FIND_BYTES(FIND_INSTRUCTIONS)
                 {
                     @Override
-                    public void work(Compiler compiler) throws Exception
+                    public void work(Parser parser) throws Exception
                     {
-                        Bytes.findBytes(compiler.components);
+                        Bytes.findBytes(parser.components);
                     }
                 },
         FIND_SYMBOLS(FIND_BYTES)
                 {
                     @Override
-                    public void work(Compiler compiler) throws Exception
+                    public void work(Parser parser) throws Exception
                     {
-                        Symbol.findSymbols(compiler.components, compiler.symbols);
+                        Symbol.findSymbols(parser.components, parser.symbols);
                     }
                 },
         PREPROCESSOR(FIND_SYMBOLS)
                 {
                     @Override
-                    public void work(Compiler compiler) throws Exception
+                    public void work(Parser parser) throws Exception
                     {
-                        Preprocessor.process(compiler.components, compiler.src, compiler.includeFiles);
+                        Preprocessor.process(parser.components, parser.src, parser.includeFiles);
                         StringBuilder stringBuilder = new StringBuilder();
-                        for (Component component : compiler.components) stringBuilder.append(((SrcComponent) component).contents).append('\n');
-                        compiler.postPre = stringBuilder.toString();
-                        compiler.symbols.put("$", compiler.currentLocation);
+                        for (Component component : parser.components) stringBuilder.append(((SrcComponent) component).contents).append('\n');
+                        parser.postPre = stringBuilder.toString();
+                        parser.symbols.put("$", parser.currentLocation);
                     }
                 },
         INIT(PREPROCESSOR)
                 {
                     @Override
-                    public void work(Compiler compiler) throws Exception
+                    public void work(Parser parser) throws Exception
                     {
 
                     }
@@ -284,6 +284,6 @@ public class Compiler
             this.nextStep = nextStep;
         }
 
-        public abstract void work(Compiler compiler) throws Exception;
+        public abstract void work(Parser parser) throws Exception;
     }
 }

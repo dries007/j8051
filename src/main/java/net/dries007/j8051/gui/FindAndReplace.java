@@ -34,32 +34,31 @@ package net.dries007.j8051.gui;
 import net.dries007.j8051.Main;
 import net.dries007.j8051.util.Constants;
 import org.apache.commons.io.FilenameUtils;
-import org.fife.ui.rsyntaxtextarea.parser.DefaultParserNotice;
 import org.fife.ui.rtextarea.RTextArea;
 import org.fife.ui.rtextarea.RTextScrollPane;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeCellEditor;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.*;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static net.dries007.j8051.gui.AsmParser.ASM_PARSER;
 import static net.dries007.j8051.gui.MainGui.MAIN_GUI;
 import static net.dries007.j8051.util.Constants.*;
-import static net.dries007.j8051.util.Constants.saveProperties;
 
-public class FindAndReplace extends JDialog
+public class FindAndReplace extends JFrame
 {
     public static final FindAndReplace         FIND_AND_REPLACE = new FindAndReplace();
     private final       DefaultMutableTreeNode rootNode         = new DefaultMutableTreeNode("Results");
@@ -79,17 +78,21 @@ public class FindAndReplace extends JDialog
     public  JCheckBox    alwaysOnTopCheckBox;
     public  JCheckBox    ignoreCaseCheckBox;
     public  JTree        resultsTree;
+    public  JSlider opacitySlider;
 
+    private Point mouseDownCompCoords;
     private Result lastResult = null;
 
     private FindAndReplace()
     {
+        $$$setupUI$$$();
         setContentPane(contentPane);
-        setModal(false);
         setTitle("Find and replace - j8051");
         setMinimumSize(new Dimension(660, 375));
         setMaximumSize(new Dimension(660, 375));
         setResizable(false);
+        setUndecorated(true);
+        contentPane.setOpaque(false);
         try
         {
             for (String res : new String[]{"1024", "512", "256", "128"})
@@ -117,6 +120,26 @@ public class FindAndReplace extends JDialog
                 saveProperties();
             }
         });
+        addMouseListener(new MouseAdapter()
+        {
+            public void mouseReleased(MouseEvent e)
+            {
+                mouseDownCompCoords = null;
+            }
+
+            public void mousePressed(MouseEvent e)
+            {
+                mouseDownCompCoords = e.getPoint();
+            }
+        });
+        addMouseMotionListener(new MouseMotionAdapter()
+        {
+            public void mouseDragged(MouseEvent e)
+            {
+                Point currCoords = e.getLocationOnScreen();
+                setLocation(currCoords.x - mouseDownCompCoords.x, currCoords.y - mouseDownCompCoords.y);
+            }
+        });
         setAlwaysOnTop(Boolean.parseBoolean(Constants.PROPERTIES.getProperty(FIND_ALWAYSONTOP, "true")));
         alwaysOnTopCheckBox.setSelected(isAlwaysOnTop());
         alwaysOnTopCheckBox.addActionListener(new ActionListener()
@@ -140,12 +163,50 @@ public class FindAndReplace extends JDialog
             }
         });
         resultsTree.setModel(new DefaultTreeModel(rootNode));
+        resultsTree.addKeyListener(new KeyAdapter()
+        {
+            @Override
+            public void keyTyped(KeyEvent e)
+            {
+                if (e.getKeyChar() == KeyEvent.VK_DELETE)
+                {
+                    if (resultsTree.getSelectionPaths() == null) return;
+                    for (TreePath path : resultsTree.getSelectionPaths())
+                    {
+                        rootNode.remove((MutableTreeNode) path.getLastPathComponent());
+                    }
+                    resultsTree.updateUI();
+                }
+            }
+        });
         closeButton.addActionListener(new ActionListener()
         {
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                setVisible(false);
+                dispose();
+            }
+        });
+        addWindowListener(new WindowAdapter()
+        {
+            @Override
+            public void windowClosed(WindowEvent e)
+            {
+                rootNode.removeAllChildren();
+                resultsTree.clearSelection();
+                resultsTree.updateUI();
+                lastResult = null;
+                MAIN_GUI.asmContents.removeAllLineHighlights();
+                for (int i = 0; i < MAIN_GUI.includeFiles.getTabCount(); i++) ((RTextScrollPane) MAIN_GUI.includeFiles.getComponentAt(i)).getTextArea().removeAllLineHighlights();
+            }
+
+            @Override
+            public void windowClosing(WindowEvent e)
+            {
+                rootNode.removeAllChildren();
+                resultsTree.clearSelection();
+                resultsTree.updateUI();
+                lastResult = null;
                 MAIN_GUI.asmContents.removeAllLineHighlights();
                 for (int i = 0; i < MAIN_GUI.includeFiles.getTabCount(); i++) ((RTextScrollPane) MAIN_GUI.includeFiles.getComponentAt(i)).getTextArea().removeAllLineHighlights();
             }
@@ -158,8 +219,6 @@ public class FindAndReplace extends JDialog
                 doAction(e.getActionCommand());
             }
         };
-        findBox.addActionListener(cmdButtonListener);
-        replaceBox.addActionListener(cmdButtonListener);
         findNextButton.addActionListener(cmdButtonListener);
         findAllButton.addActionListener(cmdButtonListener);
         replaceButton.addActionListener(cmdButtonListener);
@@ -186,9 +245,12 @@ public class FindAndReplace extends JDialog
             {
                 if (node.getChildCount() == 0)
                 {
-                    Result result = (Result) node.getUserObject();
-                    result.select();
-                    getTextAreaFromFileId(result.fileId).addLineHighlight(result.lineNr, Color.YELLOW);
+                    if (node.getUserObject() instanceof Result)
+                    {
+                        Result result = (Result) node.getUserObject();
+                        result.select();
+                        getTextAreaFromFileId(result.fileId).addLineHighlight(result.lineNr, Color.YELLOW);
+                    }
                 }
                 else
                 {
@@ -196,24 +258,101 @@ public class FindAndReplace extends JDialog
                 }
             }
         });
+        if (Constants.PROPERTIES.containsKey(FIND_OPACITY))
+        {
+            setOpacity(Float.parseFloat(Constants.PROPERTIES.getProperty(FIND_OPACITY)));
+            opacitySlider.setValue((int) (getOpacity() * 100));
+        }
+        opacitySlider.addChangeListener(new ChangeListener()
+        {
+            @Override
+            public void stateChanged(ChangeEvent e)
+            {
+                setOpacity(opacitySlider.getValue() / 100.0f);
+                Constants.PROPERTIES.setProperty(FIND_OPACITY, String.valueOf(opacitySlider.getValue() / 100.0f));
+                saveProperties();
+            }
+        });
+        rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0x00), "esc");
+        rootPane.getActionMap().put("esc", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                dispose();
+            }
+        });
+
+        (Boolean.parseBoolean(Constants.PROPERTIES.getProperty(FIND_REGEX)) ? regexRadioButton : normalRadioButton).setSelected(true);
+        int domain = Constants.PROPERTIES.containsKey(FIND_DOMAIN) ? Integer.parseInt(Constants.PROPERTIES.getProperty(FIND_DOMAIN)) : 0;
+        (domain == 0 ? srcIncludesRadioButton : (domain == 1 ? srcOnlyRadioButton : selectionOnlyRadioButton)).setSelected(true);
+
+        ActionListener modeListener = new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                Constants.PROPERTIES.setProperty(FIND_REGEX, String.valueOf(regexRadioButton.isSelected()));
+                saveProperties();
+            }
+        };
+        normalRadioButton.addActionListener(modeListener);
+        regexRadioButton.addActionListener(modeListener);
+        ActionListener domainListener = new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                Constants.PROPERTIES.setProperty(FIND_REGEX, srcIncludesRadioButton.isSelected() ? "0" : srcOnlyRadioButton.isSelected() ? "1" : "2");
+                saveProperties();
+            }
+        };
+        srcIncludesRadioButton.addActionListener(domainListener);
+        srcOnlyRadioButton.addActionListener(domainListener);
+        selectionOnlyRadioButton.addActionListener(domainListener);
+
+        ((JTextField) findBox.getEditor().getEditorComponent()).addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                doAction("find");
+            }
+        });
+        ((JTextField) replaceBox.getEditor().getEditorComponent()).addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                doAction("replace");
+            }
+        });
+        findBox.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (e.getActionCommand().equals("comboBoxChanged")) lastResult = null;
+            }
+        });
     }
 
     private void doAction(String actionCommand)
     {
-        if (actionCommand.equals("comboBoxChanged"))
-        {
-            lastResult = null;
-            return;
-        }
-        if (actionCommand.equals("comboBoxEdited")) actionCommand = "find";
         try
         {
             MAIN_GUI.asmContents.removeAllLineHighlights();
             for (int i = 0; i < MAIN_GUI.includeFiles.getTabCount(); i++) ((RTextScrollPane) MAIN_GUI.includeFiles.getComponentAt(i)).getTextArea().removeAllLineHighlights();
-            boolean replace = actionCommand.startsWith("replace");
             boolean all = actionCommand.endsWith("All");
             ArrayList<Result> results = gather(all);
-            for (Result result : results) getTextAreaFromFileId(result.fileId).addLineHighlight(result.lineNr, Color.YELLOW);
+            if (actionCommand.startsWith("replace"))
+            {
+                replace(results);
+            }
+            else
+            {
+                for (Result result : results) getTextAreaFromFileId(result.fileId).addLineHighlight(result.lineNr, Color.YELLOW);
+            }
             DefaultMutableTreeNode node = getDefaultMutableTreeNode(results, all);
             rootNode.insert(node, 0);
             resultsTree.expandPath(new TreePath(node.getPath()));
@@ -222,6 +361,17 @@ public class FindAndReplace extends JDialog
         catch (Exception e)
         {
             e.printStackTrace();
+        }
+    }
+
+    private void replace(ArrayList<Result> results)
+    {
+        String replaceText = String.valueOf(replaceBox.getSelectedItem());
+        for (Result result : results)
+        {
+            if (result.fileId != -1) continue;
+            result.replaceText = replaceText;
+            MAIN_GUI.asmContents.replaceRange(result.replaceText, result.startPos, result.endPos);
         }
     }
 
@@ -263,7 +413,10 @@ public class FindAndReplace extends JDialog
         if (regexRadioButton.isSelected())
         {
             Pattern pattern = Pattern.compile(findBox.getSelectedItem().toString(), ignoreCaseCheckBox.isSelected() ? Pattern.CASE_INSENSITIVE : 0x00);
-            //pattern.matcher(searchText);
+            Result tmp = (lastResult = findRegex(pattern, all ? null : lastResult));
+            if (tmp != null) results.add(tmp);
+            if (!all || tmp == null) return results;
+            while ((tmp = findRegex(pattern, tmp)) != null) results.add(tmp);
         }
         else
         {
@@ -280,6 +433,26 @@ public class FindAndReplace extends JDialog
         return fileid != -1 ? (((RTextScrollPane) MAIN_GUI.includeFiles.getComponentAt(fileid))).getTextArea() : MAIN_GUI.asmContents;
     }
 
+    private Result findRegex(Pattern pattern, Result prev) throws BadLocationException
+    {
+        Result result = new Result();
+        result.fileId = prev != null ? prev.fileId : -1;
+        do
+        {
+            int startPos = srcOnlyRadioButton.isSelected() ? 0 : prev != null && prev.fileId == result.fileId ? prev.endPos : 0;
+            RTextArea textArea = getTextAreaFromFileId(result.fileId);
+            Document document = textArea.getDocument();
+            Matcher matcher = pattern.matcher(document.getText(startPos, document.getLength() - startPos));
+            if (!matcher.find()) continue;
+            result.startPos = matcher.start() + startPos;
+            result.endPos = matcher.end() + startPos;
+            result.lineNr = textArea.getLineOfOffset(result.startPos);
+            return result;
+        }
+        while (MAIN_GUI.includeFiles.getTabCount() > ++result.fileId && !srcOnlyRadioButton.isSelected());
+        return null;
+    }
+
     private Result findPlain(Result prev) throws BadLocationException
     {
         Result result = new Result();
@@ -287,28 +460,35 @@ public class FindAndReplace extends JDialog
         int index;
         do
         {
-            int startPos = prev != null && prev.fileId == result.fileId ? prev.endPos : 0;
+            int startPos = srcOnlyRadioButton.isSelected() ? 0 : prev != null && prev.fileId == result.fileId ? prev.endPos : 0;
             RTextArea textArea = getTextAreaFromFileId(result.fileId);
             Document document = textArea.getDocument();
             String searchText = document.getText(startPos, document.getLength() - startPos);
             result.findText = String.valueOf(findBox.getSelectedItem());
-            result.replaceText = String.valueOf(replaceBox.getSelectedItem());
             if (!ignoreCaseCheckBox.isSelected()) index = searchText.indexOf(result.findText);
             else index = searchText.toLowerCase().indexOf(result.findText.toLowerCase());
+            if (index == -1) continue;
             result.startPos = startPos + index;
             result.endPos = result.startPos + result.findText.length();
             result.lineNr = textArea.getLineOfOffset(result.startPos);
+            return result;
         }
-        while (index == -1 && MAIN_GUI.includeFiles.getTabCount() > ++result.fileId);
-        if (index == -1) return null;
-        return result;
+        while (MAIN_GUI.includeFiles.getTabCount() > ++result.fileId && !srcOnlyRadioButton.isSelected());
+        return null;
     }
 
+    private void createUIComponents()
     {
-// GUI initializer generated by IntelliJ IDEA GUI Designer
-// >>> IMPORTANT!! <<<
-// DO NOT EDIT OR ADD ANY CODE HERE!
-        $$$setupUI$$$();
+        contentPane = new JPanel()
+        {
+            @Override
+            protected void paintComponent(Graphics g)
+            {
+                super.paintComponent(g);
+                g.setColor(Color.red);
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
     }
 
     /**
@@ -320,7 +500,7 @@ public class FindAndReplace extends JDialog
      */
     private void $$$setupUI$$$()
     {
-        contentPane = new JPanel();
+        createUIComponents();
         contentPane.setLayout(new GridBagLayout());
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new GridBagLayout());
@@ -397,45 +577,61 @@ public class FindAndReplace extends JDialog
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.WEST;
         panel4.add(srcOnlyRadioButton, gbc);
-        alwaysOnTopCheckBox = new JCheckBox();
-        alwaysOnTopCheckBox.setSelected(true);
-        alwaysOnTopCheckBox.setText("Always on top");
-        gbc = new GridBagConstraints();
-        gbc.gridx = 3;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST;
-        panel2.add(alwaysOnTopCheckBox, gbc);
-        final JPanel spacer1 = new JPanel();
+        final JPanel panel5 = new JPanel();
+        panel5.setLayout(new GridBagLayout());
         gbc = new GridBagConstraints();
         gbc.gridx = 2;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        panel2.add(panel5, gbc);
+        alwaysOnTopCheckBox = new JCheckBox();
+        alwaysOnTopCheckBox.setSelected(true);
+        alwaysOnTopCheckBox.setText("Always on top");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        panel5.add(alwaysOnTopCheckBox, gbc);
+        opacitySlider = new JSlider();
+        opacitySlider.setMinimum(10);
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel2.add(spacer1, gbc);
-        final JPanel panel5 = new JPanel();
-        panel5.setLayout(new GridBagLayout());
+        panel5.add(opacitySlider, gbc);
+        final JLabel label1 = new JLabel();
+        label1.setText("Opacity out of focus:");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        panel5.add(label1, gbc);
+        final JPanel panel6 = new JPanel();
+        panel6.setLayout(new GridBagLayout());
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
-        panel1.add(panel5, gbc);
-        final JLabel label1 = new JLabel();
-        label1.setText("Find:");
+        panel1.add(panel6, gbc);
+        final JLabel label2 = new JLabel();
+        label2.setText("Find:");
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.WEST;
         gbc.insets = new Insets(10, 10, 5, 10);
-        panel5.add(label1, gbc);
-        final JLabel label2 = new JLabel();
-        label2.setText("Replace:");
+        panel6.add(label2, gbc);
+        final JLabel label3 = new JLabel();
+        label3.setText("Replace:");
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.anchor = GridBagConstraints.WEST;
         gbc.insets = new Insets(5, 10, 10, 10);
-        panel5.add(label2, gbc);
+        panel6.add(label3, gbc);
         findBox = new JComboBox();
         findBox.setEditable(true);
         gbc = new GridBagConstraints();
@@ -445,7 +641,7 @@ public class FindAndReplace extends JDialog
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(10, 10, 5, 10);
-        panel5.add(findBox, gbc);
+        panel6.add(findBox, gbc);
         replaceBox = new JComboBox();
         replaceBox.setEditable(true);
         gbc = new GridBagConstraints();
@@ -455,21 +651,14 @@ public class FindAndReplace extends JDialog
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(5, 10, 10, 10);
-        panel5.add(replaceBox, gbc);
-        final JPanel spacer2 = new JPanel();
-        gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.VERTICAL;
-        panel1.add(spacer2, gbc);
-        final JPanel panel6 = new JPanel();
-        panel6.setLayout(new GridBagLayout());
+        panel6.add(replaceBox, gbc);
+        final JPanel panel7 = new JPanel();
+        panel7.setLayout(new GridBagLayout());
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 0;
         gbc.fill = GridBagConstraints.BOTH;
-        contentPane.add(panel6, gbc);
+        contentPane.add(panel7, gbc);
         findNextButton = new JButton();
         findNextButton.setActionCommand("find");
         findNextButton.setHideActionText(false);
@@ -479,7 +668,7 @@ public class FindAndReplace extends JDialog
         gbc.gridy = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(2, 2, 2, 2);
-        panel6.add(findNextButton, gbc);
+        panel7.add(findNextButton, gbc);
         findAllButton = new JButton();
         findAllButton.setActionCommand("findAll");
         findAllButton.setText("Find all");
@@ -488,7 +677,7 @@ public class FindAndReplace extends JDialog
         gbc.gridy = 1;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(2, 2, 2, 2);
-        panel6.add(findAllButton, gbc);
+        panel7.add(findAllButton, gbc);
         replaceButton = new JButton();
         replaceButton.setActionCommand("replace");
         replaceButton.setText("Replace");
@@ -497,7 +686,7 @@ public class FindAndReplace extends JDialog
         gbc.gridy = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(2, 2, 2, 2);
-        panel6.add(replaceButton, gbc);
+        panel7.add(replaceButton, gbc);
         closeButton = new JButton();
         closeButton.setText("Close");
         gbc = new GridBagConstraints();
@@ -505,7 +694,7 @@ public class FindAndReplace extends JDialog
         gbc.gridy = 4;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(2, 2, 2, 2);
-        panel6.add(closeButton, gbc);
+        panel7.add(closeButton, gbc);
         replaceAllButton = new JButton();
         replaceAllButton.setActionCommand("replaceAll");
         replaceAllButton.setText("Replace all");
@@ -514,7 +703,7 @@ public class FindAndReplace extends JDialog
         gbc.gridy = 3;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(2, 2, 2, 2);
-        panel6.add(replaceAllButton, gbc);
+        panel7.add(replaceAllButton, gbc);
         final JScrollPane scrollPane1 = new JScrollPane();
         gbc = new GridBagConstraints();
         gbc.gridx = 0;

@@ -31,8 +31,7 @@
 
 package net.dries007.j8051.gui;
 
-import net.dries007.j8051.compiler.Compiler;
-import net.dries007.j8051.compiler.components.Symbol;
+import net.dries007.j8051.compiler.Parser;
 import net.dries007.j8051.util.Helper;
 import net.dries007.j8051.util.exceptions.CompileException;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
@@ -44,7 +43,6 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 
-import static net.dries007.j8051.gui.AsmParser.ASM_PARSER;
 import static net.dries007.j8051.gui.MainGui.MAIN_GUI;
 import static net.dries007.j8051.util.Constants.*;
 
@@ -64,17 +62,17 @@ class CompileRunnable implements Runnable
         {
             MAIN_GUI.status.setText("Compiling...");
             System.gc();
-            final net.dries007.j8051.compiler.Compiler compiler = new Compiler(MAIN_GUI.asmContents.getText());
-            while (compiler.hasWork())
+            final Parser parser = new Parser(MAIN_GUI.asmContents.getText());
+            while (parser.hasWork())
             {
-                compiler.doWork();
-                MAIN_GUI.status.setText(Helper.capitalize(compiler.getStage().name()));
-                switch (compiler.getStage())
+                parser.doWork();
+                MAIN_GUI.status.setText(Helper.capitalize(parser.getStage().name()));
+                switch (parser.getStage())
                 {
                     case PREPROCESSOR:
-                        MAIN_GUI.preText.setText(compiler.postPre);
+                        MAIN_GUI.preText.setText(parser.postPre);
                         MAIN_GUI.includeFiles.removeAll();
-                        for (String file : compiler.includeFiles.keySet())
+                        for (String file : parser.includeFiles.keySet())
                         {
                             GridBagConstraints gbc = new GridBagConstraints();
                             gbc.gridx = 0;
@@ -85,7 +83,7 @@ class CompileRunnable implements Runnable
                             RTextScrollPane rTextScrollPane1 = new RTextScrollPane();
                             rTextScrollPane1.setName(file);
                             rTextScrollPane1.setBorder(BorderFactory.createTitledBorder("Source"));
-                            RSyntaxTextArea text = new RSyntaxTextArea(compiler.includeFiles.get(file));
+                            RSyntaxTextArea text = new RSyntaxTextArea(parser.includeFiles.get(file));
                             TextLineNumber tln = new TextLineNumber(text);
                             rTextScrollPane1.setRowHeaderView(tln);
                             text.setFadeCurrentLineHighlight(false);
@@ -99,7 +97,7 @@ class CompileRunnable implements Runnable
                         }
                         break;
                     case MAKE_HEX:
-                        MAIN_GUI.hexTable.setModel(new DefaultTableModel(compiler.getHexTable(), new String[]{"Address    ", "0x.0", "0x.1", "0x.2", "0x.3", "0x.4", "0x.5", "0x.6", "0x.7", "0x.8", "0x.9", "0x.A", "0x.B", "0x.C", "0x.D", "0x.E", "0x.F"})
+                        MAIN_GUI.hexTable.setModel(new DefaultTableModel(parser.getHexTable(), new String[]{"Address    ", "0x.0", "0x.1", "0x.2", "0x.3", "0x.4", "0x.5", "0x.6", "0x.7", "0x.8", "0x.9", "0x.A", "0x.B", "0x.C", "0x.D", "0x.E", "0x.F"})
                         {
                             @Override
                             public boolean isCellEditable(int row, int column)
@@ -111,8 +109,8 @@ class CompileRunnable implements Runnable
                         MAIN_GUI.hexTable.updateUI();
                         break;
                     default:
-                        MAIN_GUI.symbolHashMap = compiler.symbols;
-                        MAIN_GUI.symbolsTable.setModel(new DefaultTableModel(compiler.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)", "Value (String)"})
+                        MAIN_GUI.symbolHashMap = parser.symbols;
+                        MAIN_GUI.symbolsTable.setModel(new DefaultTableModel(parser.getSymbols(), new String[]{"Name", "Type", "Value (Hex)", "Value (dec)", "Value (String)"})
                         {
                             @Override
                             public boolean isCellEditable(int row, int column)
@@ -123,7 +121,7 @@ class CompileRunnable implements Runnable
                         MAIN_GUI.resizeColumnWidth(MAIN_GUI.symbolsTable);
                         MAIN_GUI.symbolsTable.updateUI();
 
-                        MAIN_GUI.componentsTable.setModel(new DefaultTableModel(compiler.getComponents(), new String[]{"Line", "Type", "SubType", "Contents", "Address", "Bytes"})
+                        MAIN_GUI.componentsTable.setModel(new DefaultTableModel(parser.getComponents(), new String[]{"Line", "Type", "SubType", "Contents", "Address", "Bytes"})
                         {
                             @Override
                             public boolean isCellEditable(int row, int column)

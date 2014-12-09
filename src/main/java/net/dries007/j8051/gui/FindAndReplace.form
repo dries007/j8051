@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="net.dries007.j8051.gui.FindAndReplace">
-  <grid id="cbd77" binding="contentPane" layout-manager="GridBagLayout">
+  <grid id="cbd77" binding="contentPane" custom-create="true" layout-manager="GridBagLayout">
     <constraints>
-      <xy x="48" y="54" width="737" height="415"/>
+      <xy x="48" y="54" width="825" height="415"/>
     </constraints>
     <properties/>
     <border type="none"/>
@@ -98,22 +98,44 @@
                   </component>
                 </children>
               </grid>
-              <component id="d488c" class="javax.swing.JCheckBox" binding="alwaysOnTopCheckBox" default-binding="true">
+              <grid id="8103d" layout-manager="GridBagLayout">
                 <constraints>
-                  <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
-                  <gridbag weightx="0.0" weighty="0.0"/>
-                </constraints>
-                <properties>
-                  <selected value="true"/>
-                  <text value="Always on top"/>
-                </properties>
-              </component>
-              <hspacer id="ccae3">
-                <constraints>
-                  <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                  <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
                   <gridbag weightx="1.0" weighty="0.0"/>
                 </constraints>
-              </hspacer>
+                <properties/>
+                <border type="none"/>
+                <children>
+                  <component id="d488c" class="javax.swing.JCheckBox" binding="alwaysOnTopCheckBox" default-binding="true">
+                    <constraints>
+                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                      <gridbag weightx="0.0" weighty="0.0"/>
+                    </constraints>
+                    <properties>
+                      <selected value="true"/>
+                      <text value="Always on top"/>
+                    </properties>
+                  </component>
+                  <component id="b5c58" class="javax.swing.JSlider" binding="opacitySlider">
+                    <constraints>
+                      <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+                      <gridbag weightx="0.0" weighty="0.0"/>
+                    </constraints>
+                    <properties>
+                      <minimum value="10"/>
+                    </properties>
+                  </component>
+                  <component id="dde38" class="javax.swing.JLabel">
+                    <constraints>
+                      <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                      <gridbag weightx="0.0" weighty="0.0"/>
+                    </constraints>
+                    <properties>
+                      <text value="Opacity out of focus:"/>
+                    </properties>
+                  </component>
+                </children>
+              </grid>
             </children>
           </grid>
           <grid id="b94ad" layout-manager="GridBagLayout">
@@ -162,12 +184,6 @@
               </component>
             </children>
           </grid>
-          <vspacer id="6cfc8">
-            <constraints>
-              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
-              <gridbag weightx="0.0" weighty="1.0"/>
-            </constraints>
-          </vspacer>
         </children>
       </grid>
       <grid id="9ce33" layout-manager="GridBagLayout">

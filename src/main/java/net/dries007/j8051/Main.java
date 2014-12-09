@@ -30,7 +30,7 @@
 
 package net.dries007.j8051;
 
-import net.dries007.j8051.compiler.Compiler;
+import net.dries007.j8051.compiler.Parser;
 import net.dries007.j8051.gui.MainGui;
 import org.apache.commons.io.FileUtils;
 
@@ -78,8 +78,8 @@ public class Main
             }
             System.out.println(" -=- File used -=- ");
             System.out.println(Main.srcFile.getAbsolutePath());
-            Compiler compiler = new Compiler(FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT)));
-            while (compiler.hasWork()) compiler.doWork();
+            Parser parser = new Parser(FileUtils.readFileToString(Main.srcFile, PROPERTIES.getProperty(ENCODING, ENCODING_DEFAULT)));
+            while (parser.hasWork()) parser.doWork();
             System.out.println(" -=- Done -=- ");
         }
     }

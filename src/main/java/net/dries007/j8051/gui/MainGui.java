@@ -106,6 +106,7 @@ public class MainGui
 
     private MainGui()
     {
+        JFrame.setDefaultLookAndFeelDecorated(true);
         $$$setupUI$$$();
         AbstractTokenMakerFactory atmf = (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
         atmf.putMapping(SYNTAX_NAME, Assembler8051TokenMaker.class.getName());
@@ -403,6 +404,18 @@ public class MainGui
             public void actionPerformed(ActionEvent e)
             {
                 FIND_AND_REPLACE.setVisible(true);
+            }
+        });
+        frame.addWindowFocusListener(new WindowAdapter()
+        {
+            @Override
+            public void windowGainedFocus(WindowEvent e)
+            {
+                if (FIND_AND_REPLACE.isVisible() && e.getOppositeWindow() != FIND_AND_REPLACE)
+                {
+                    FIND_AND_REPLACE.requestFocus();
+                    frame.requestFocus();
+                }
             }
         });
     }
