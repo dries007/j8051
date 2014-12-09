@@ -14,6 +14,7 @@ apply plugin: "eclipse"
 apply plugin: "idea-utils"
 
 group = "net.dries007.j8051"
+version = "1.0.0"
 
 def vendor = "Dries007"
 def gitURL = "github.com/Dries007/j8051"
@@ -21,7 +22,6 @@ def gitURL = "github.com/Dries007/j8051"
 sourceCompatibility = 1.7
 targetCompatibility = 1.7
 
-//noinspection GroovyAssignabilityCheck
 configurations {
     compile
     deployJars

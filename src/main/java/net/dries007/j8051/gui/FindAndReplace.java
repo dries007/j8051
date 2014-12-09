@@ -43,7 +43,6 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.MutableTreeNode;
@@ -58,7 +57,7 @@ import java.util.regex.Pattern;
 import static net.dries007.j8051.gui.MainGui.MAIN_GUI;
 import static net.dries007.j8051.util.Constants.*;
 
-public class FindAndReplace extends JFrame
+public class FindAndReplace extends JDialog
 {
     public static final FindAndReplace         FIND_AND_REPLACE = new FindAndReplace();
     private final       DefaultMutableTreeNode rootNode         = new DefaultMutableTreeNode("Results");
@@ -85,6 +84,7 @@ public class FindAndReplace extends JFrame
 
     private FindAndReplace()
     {
+        super(MAIN_GUI.frame, false);
         $$$setupUI$$$();
         setContentPane(contentPane);
         setTitle("Find and replace - j8051");
@@ -170,10 +170,12 @@ public class FindAndReplace extends JFrame
             {
                 if (e.getKeyChar() == KeyEvent.VK_DELETE)
                 {
+                    lastResult = null;
                     if (resultsTree.getSelectionPaths() == null) return;
                     for (TreePath path : resultsTree.getSelectionPaths())
                     {
-                        rootNode.remove((MutableTreeNode) path.getLastPathComponent());
+                        if (rootNode.isNodeChild((MutableTreeNode) path.getLastPathComponent()))
+                            rootNode.remove((MutableTreeNode) path.getLastPathComponent());
                     }
                     resultsTree.updateUI();
                 }
@@ -248,6 +250,7 @@ public class FindAndReplace extends JFrame
                     if (node.getUserObject() instanceof Result)
                     {
                         Result result = (Result) node.getUserObject();
+                        lastResult = result;
                         result.select();
                         getTextAreaFromFileId(result.fileId).addLineHighlight(result.lineNr, Color.YELLOW);
                     }
@@ -303,7 +306,7 @@ public class FindAndReplace extends JFrame
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                Constants.PROPERTIES.setProperty(FIND_REGEX, srcIncludesRadioButton.isSelected() ? "0" : srcOnlyRadioButton.isSelected() ? "1" : "2");
+                Constants.PROPERTIES.setProperty(FIND_DOMAIN, srcIncludesRadioButton.isSelected() ? "0" : srcOnlyRadioButton.isSelected() ? "1" : "2");
                 saveProperties();
             }
         };
@@ -335,6 +338,21 @@ public class FindAndReplace extends JFrame
                 if (e.getActionCommand().equals("comboBoxChanged")) lastResult = null;
             }
         });
+
+        addWindowFocusListener(new WindowFocusListener()
+        {
+            @Override
+            public void windowGainedFocus(WindowEvent e)
+            {
+                setOpacity(1f);
+            }
+
+            @Override
+            public void windowLostFocus(WindowEvent e)
+            {
+                setOpacity(opacitySlider.getValue() / 100.0f);
+            }
+        });
     }
 
     private void doAction(String actionCommand)
@@ -344,15 +362,10 @@ public class FindAndReplace extends JFrame
             MAIN_GUI.asmContents.removeAllLineHighlights();
             for (int i = 0; i < MAIN_GUI.includeFiles.getTabCount(); i++) ((RTextScrollPane) MAIN_GUI.includeFiles.getComponentAt(i)).getTextArea().removeAllLineHighlights();
             boolean all = actionCommand.endsWith("All");
-            ArrayList<Result> results = gather(all);
-            if (actionCommand.startsWith("replace"))
-            {
-                replace(results);
-            }
-            else
-            {
-                for (Result result : results) getTextAreaFromFileId(result.fileId).addLineHighlight(result.lineNr, Color.YELLOW);
-            }
+            boolean replace = actionCommand.startsWith("replace");
+            ArrayList<Result> results = gather(all, replace);
+            for (Result result : results) getTextAreaFromFileId(result.fileId).addLineHighlight(result.lineNr, Color.YELLOW);
+            if (replace) replace(results);
             DefaultMutableTreeNode node = getDefaultMutableTreeNode(results, all);
             rootNode.insert(node, 0);
             resultsTree.expandPath(new TreePath(node.getPath()));
@@ -407,24 +420,15 @@ public class FindAndReplace extends JFrame
         return out.toString();
     }
 
-    private ArrayList<Result> gather(boolean all) throws BadLocationException
+    private ArrayList<Result> gather(boolean all, boolean replace) throws BadLocationException
     {
         ArrayList<Result> results = new ArrayList<>();
-        if (regexRadioButton.isSelected())
-        {
-            Pattern pattern = Pattern.compile(findBox.getSelectedItem().toString(), ignoreCaseCheckBox.isSelected() ? Pattern.CASE_INSENSITIVE : 0x00);
-            Result tmp = (lastResult = findRegex(pattern, all ? null : lastResult));
-            if (tmp != null) results.add(tmp);
-            if (!all || tmp == null) return results;
-            while ((tmp = findRegex(pattern, tmp)) != null) results.add(tmp);
-        }
-        else
-        {
-            Result tmp = (lastResult = findPlain(all ? null : lastResult));
-            if (tmp != null) results.add(tmp);
-            if (!all || tmp == null) return results;
-            while ((tmp = findPlain(tmp)) != null) results.add(tmp);
-        }
+        Pattern pattern = null;
+        if (regexRadioButton.isSelected()) pattern = Pattern.compile(findBox.getSelectedItem().toString(), ignoreCaseCheckBox.isSelected() ? Pattern.CASE_INSENSITIVE : 0x00);
+        Result tmp = (lastResult = find(pattern, all ? null : lastResult, replace || srcOnlyRadioButton.isSelected()));
+        if (tmp != null) results.add(tmp);
+        if (!all || tmp == null) return results;
+        while ((tmp = find(pattern, tmp, replace || srcOnlyRadioButton.isSelected())) != null) results.add(tmp);
         return results;
     }
 
@@ -433,62 +437,67 @@ public class FindAndReplace extends JFrame
         return fileid != -1 ? (((RTextScrollPane) MAIN_GUI.includeFiles.getComponentAt(fileid))).getTextArea() : MAIN_GUI.asmContents;
     }
 
-    private Result findRegex(Pattern pattern, Result prev) throws BadLocationException
+    private Result find(Pattern pattern, Result prev, boolean replace) throws BadLocationException
     {
         Result result = new Result();
-        result.fileId = prev != null ? prev.fileId : -1;
-        do
+        if (replace && prev.fileId != -1) prev = null;
+        else if (prev != null) result.fileId = prev.fileId;
+        boolean startFromTopOfFile = false;
+        while (MAIN_GUI.includeFiles.getTabCount() > result.fileId)
         {
-            int startPos = srcOnlyRadioButton.isSelected() ? 0 : prev != null && prev.fileId == result.fileId ? prev.endPos : 0;
-            RTextArea textArea = getTextAreaFromFileId(result.fileId);
-            Document document = textArea.getDocument();
-            Matcher matcher = pattern.matcher(document.getText(startPos, document.getLength() - startPos));
-            if (!matcher.find()) continue;
+            switch (find(result, pattern, prev, startFromTopOfFile))
+            {
+                case 0: return null;
+                case 1: return result;
+            }
+            if (!srcIncludesRadioButton.isSelected()) break;
+            startFromTopOfFile = true;
+            result.fileId++;
+        }
+        return null;
+    }
+
+    private int find(Result result, Pattern pattern, Result prev, boolean startFromTopOfFile) throws BadLocationException
+    {
+        int startPos;
+        RTextArea textArea;
+        String searchText;
+        if (selectionOnlyRadioButton.isSelected())
+        {
+            result.fileId = MAIN_GUI.tabPane.getSelectedIndex() == 0 ? -1 : MAIN_GUI.includeFiles.getSelectedIndex();
+            textArea = getTextAreaFromFileId(result.fileId);
+            startPos = prev != null && prev.fileId == result.fileId ? prev.endPos : startFromTopOfFile ? 0 : textArea.getSelectionStart();
+            if (startPos >= textArea.getSelectionEnd()) return 0;
+            searchText = textArea.getText(startPos, textArea.getSelectionEnd() - startPos);
+        }
+        else
+        {
+            textArea = getTextAreaFromFileId(result.fileId);
+            startPos = prev != null && prev.fileId == result.fileId ? prev.endPos : startFromTopOfFile ? 0 : textArea.getSelectionStart();
+            searchText = textArea.getText(startPos, textArea.getDocument().getLength() - startPos);
+        }
+        if (pattern != null)
+        {
+            Matcher matcher = pattern.matcher(searchText);
+            if (!matcher.find()) return -1;
+            result.findText = matcher.group();
             result.startPos = matcher.start() + startPos;
             result.endPos = matcher.end() + startPos;
             result.lineNr = textArea.getLineOfOffset(result.startPos);
-            return result;
+            return 1;
         }
-        while (MAIN_GUI.includeFiles.getTabCount() > ++result.fileId && !srcOnlyRadioButton.isSelected());
-        return null;
-    }
-
-    private Result findPlain(Result prev) throws BadLocationException
-    {
-        Result result = new Result();
-        result.fileId = prev != null ? prev.fileId : -1;
-        int index;
-        do
+        else
         {
-            int startPos = srcOnlyRadioButton.isSelected() ? 0 : prev != null && prev.fileId == result.fileId ? prev.endPos : 0;
-            RTextArea textArea = getTextAreaFromFileId(result.fileId);
-            Document document = textArea.getDocument();
-            String searchText = document.getText(startPos, document.getLength() - startPos);
-            result.findText = String.valueOf(findBox.getSelectedItem());
+            int index;
+            result.findText = String.valueOf(findBox.getEditor().getItem());
             if (!ignoreCaseCheckBox.isSelected()) index = searchText.indexOf(result.findText);
             else index = searchText.toLowerCase().indexOf(result.findText.toLowerCase());
-            if (index == -1) continue;
+            if (index == -1) return -1;
             result.startPos = startPos + index;
             result.endPos = result.startPos + result.findText.length();
             result.lineNr = textArea.getLineOfOffset(result.startPos);
-            return result;
+            return 1;
         }
-        while (MAIN_GUI.includeFiles.getTabCount() > ++result.fileId && !srcOnlyRadioButton.isSelected());
-        return null;
-    }
-
-    private void createUIComponents()
-    {
-        contentPane = new JPanel()
-        {
-            @Override
-            protected void paintComponent(Graphics g)
-            {
-                super.paintComponent(g);
-                g.setColor(Color.red);
-                g.fillRect(0, 0, getWidth(), getHeight());
-            }
-        };
     }
 
     /**
@@ -500,7 +509,7 @@ public class FindAndReplace extends JFrame
      */
     private void $$$setupUI$$$()
     {
-        createUIComponents();
+        contentPane = new JPanel();
         contentPane.setLayout(new GridBagLayout());
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new GridBagLayout());
@@ -746,7 +755,7 @@ public class FindAndReplace extends JFrame
         @Override
         public String toString()
         {
-            StringBuilder out = new StringBuilder().append("Line: ").append(lineNr + 1).append(" \tFile: ").append('"');
+            StringBuilder out = new StringBuilder().append('"').append(findText).append("\" \tLine: ").append(lineNr + 1).append(" \tFile: ").append('"');
             if (fileId == -1) out.append(FilenameUtils.getBaseName(Main.srcFile.getName()));
             else out.append(MAIN_GUI.includeFiles.getTitleAt(fileId));
             out.append('"');
@@ -764,6 +773,36 @@ public class FindAndReplace extends JFrame
             RTextArea textArea = getTextAreaFromFileId(fileId);
             textArea.setSelectionStart(startPos);
             textArea.setSelectionEnd(endPos);
+        }
+
+        @Override
+        public boolean equals(Object o)
+        {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Result result = (Result) o;
+
+            if (endPos != result.endPos) return false;
+            if (fileId != result.fileId) return false;
+            if (lineNr != result.lineNr) return false;
+            if (startPos != result.startPos) return false;
+            if (findText != null ? !findText.equals(result.findText) : result.findText != null) return false;
+            if (replaceText != null ? !replaceText.equals(result.replaceText) : result.replaceText != null) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            int result = findText != null ? findText.hashCode() : 0;
+            result = 31 * result + (replaceText != null ? replaceText.hashCode() : 0);
+            result = 31 * result + startPos;
+            result = 31 * result + endPos;
+            result = 31 * result + fileId;
+            result = 31 * result + lineNr;
+            return result;
         }
     }
 

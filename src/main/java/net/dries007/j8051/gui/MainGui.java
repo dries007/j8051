@@ -91,6 +91,7 @@ public class MainGui
     public       RTextScrollPane      asmContentsScroll;
     public       RTextScrollPane      preTextScroll;
     public JButton              findButton;
+    public JLabel               versionLabel;
     public JCheckBoxMenuItem    autoSave;
     public JCheckBoxMenuItem    autoCompile;
     public JMenuItem            includeFolder;
@@ -396,6 +397,8 @@ public class MainGui
             public void actionPerformed(ActionEvent e)
             {
                 FIND_AND_REPLACE.setVisible(true);
+                System.out.println(tabPane.getSelectedIndex() == 0 ? asmContents.getSelectedText() : ((RTextScrollPane) includeFiles.getSelectedComponent()).getTextArea().getSelectedText());
+                FIND_AND_REPLACE.findBox.setSelectedItem(tabPane.getSelectedIndex() == 0 ? asmContents.getSelectedText() : ((RTextScrollPane) includeFiles.getSelectedComponent()).getTextArea().getSelectedText());
             }
         });
         findButton.addActionListener(new ActionListener()
@@ -610,7 +613,7 @@ public class MainGui
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 2;
-        gbc.gridwidth = 2;
+        gbc.gridwidth = 4;
         gbc.weightx = 1.0;
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
@@ -715,6 +718,7 @@ public class MainGui
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 1;
+        gbc.gridwidth = 3;
         root.add(menuBar, gbc);
         final JLabel label1 = new JLabel();
         label1.setText("Status:");
@@ -737,7 +741,7 @@ public class MainGui
         gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.gridwidth = 2;
+        gbc.gridwidth = 4;
         gbc.fill = GridBagConstraints.BOTH;
         root.add(toolBar1, gbc);
         final JPanel panel7 = new JPanel();
@@ -785,6 +789,20 @@ public class MainGui
         gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         panel7.add(spacer1, gbc);
+        versionLabel = new JLabel();
+        versionLabel.setText("Label");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 3;
+        gbc.gridy = 3;
+        gbc.anchor = GridBagConstraints.WEST;
+        root.add(versionLabel, gbc);
+        final JPanel spacer2 = new JPanel();
+        gbc = new GridBagConstraints();
+        gbc.gridx = 2;
+        gbc.gridy = 3;
+        gbc.weightx = 1.0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        root.add(spacer2, gbc);
     }
 
     /**

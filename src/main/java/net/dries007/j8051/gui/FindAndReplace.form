@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="net.dries007.j8051.gui.FindAndReplace">
-  <grid id="cbd77" binding="contentPane" custom-create="true" layout-manager="GridBagLayout">
+  <grid id="cbd77" binding="contentPane" layout-manager="GridBagLayout">
     <constraints>
       <xy x="48" y="54" width="825" height="415"/>
     </constraints>
