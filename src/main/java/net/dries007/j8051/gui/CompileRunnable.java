@@ -56,6 +56,7 @@ class CompileRunnable implements Runnable
     @Override
     public void run()
     {
+        if (!MAIN_GUI.asmContents.isEditable()) return;
         AsmParser.ASM_PARSER.result.clearNotices();
         running = true;
         try

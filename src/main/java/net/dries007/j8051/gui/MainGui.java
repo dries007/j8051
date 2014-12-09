@@ -33,6 +33,7 @@ package net.dries007.j8051.gui;
 import net.dries007.j8051.Main;
 import net.dries007.j8051.compiler.components.Symbol;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
@@ -90,15 +91,15 @@ public class MainGui
     public       JButton              saveButton;
     public       RTextScrollPane      asmContentsScroll;
     public       RTextScrollPane      preTextScroll;
-    public JButton              findButton;
-    public JLabel               versionLabel;
-    public JCheckBoxMenuItem    autoSave;
-    public JCheckBoxMenuItem    autoCompile;
-    public JMenuItem            includeFolder;
-    public JRadioButtonMenuItem encodingDefault;
-    public JRadioButtonMenuItem encodingUtf8;
-    public JRadioButtonMenuItem encodingAnsi;
-    public JMenuItem            uploadCommand;
+    public       JButton              findButton;
+    public       JCheckBoxMenuItem    autoSave;
+    public       JCheckBoxMenuItem    autoCompile;
+    public       JMenuItem            includeFolder;
+    public       JRadioButtonMenuItem encodingDefault;
+    public       JRadioButtonMenuItem encodingUtf8;
+    public       JRadioButtonMenuItem encodingAnsi;
+    public       JMenuItem            uploadCommand;
+    public       JMenuItem            newFile;
 
     public HashMap<String, Symbol> symbolHashMap;
 
@@ -195,6 +196,29 @@ public class MainGui
                 PROPERTIES.setProperty(WINDOW_X, Integer.toString(e.getComponent().getX()));
                 PROPERTIES.setProperty(WINDOW_Y, Integer.toString(e.getComponent().getY()));
                 saveProperties();
+            }
+        });
+        newFile.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (fileChooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION)
+                {
+                    File file = fileChooser.getSelectedFile();
+                    if (FilenameUtils.getExtension(file.getName()).isEmpty()) file = new File(file.getParentFile(), file.getName() + ".asm");
+                    if (!file.exists()) try
+                    {
+                        file.createNewFile();
+                    }
+                    catch (IOException e1)
+                    {
+                        status.setText(e1.getLocalizedMessage());
+                        e1.printStackTrace();
+                    }
+                    Main.setSrcFile(file);
+                    changeFile();
+                }
             }
         });
         loadFile.addActionListener(new ActionListener()
@@ -508,6 +532,9 @@ public class MainGui
         //  Filemenu
         JMenu fileMenu = new JMenu("File");
 
+        newFile = new JMenuItem("New...");
+        fileMenu.add(newFile);
+
         loadFile = new JMenuItem("Open...");
         fileMenu.add(loadFile);
 
@@ -730,7 +757,7 @@ public class MainGui
         gbc.insets = new Insets(2, 10, 2, 0);
         root.add(label1, gbc);
         status = new JLabel();
-        status.setText("Label");
+        status.setText("No file loaded.");
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 3;
@@ -789,20 +816,6 @@ public class MainGui
         gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         panel7.add(spacer1, gbc);
-        versionLabel = new JLabel();
-        versionLabel.setText("Label");
-        gbc = new GridBagConstraints();
-        gbc.gridx = 3;
-        gbc.gridy = 3;
-        gbc.anchor = GridBagConstraints.WEST;
-        root.add(versionLabel, gbc);
-        final JPanel spacer2 = new JPanel();
-        gbc = new GridBagConstraints();
-        gbc.gridx = 2;
-        gbc.gridy = 3;
-        gbc.weightx = 1.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        root.add(spacer2, gbc);
     }
 
     /**

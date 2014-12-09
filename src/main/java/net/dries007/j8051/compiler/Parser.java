@@ -49,11 +49,11 @@ import static net.dries007.j8051.util.Constants.*;
  */
 public class Parser
 {
-    public final Symbol                  currentLocation = new Symbol();
-    public final LinkedList<Component>   components      = new LinkedList<>();
-    public final LinkedList<Section>     sections        = new LinkedList<>();
-    public final HashMap<String, Symbol> symbols         = new HashMap<>();
-    public final LinkedHashMap <String, String> includeFiles    = new LinkedHashMap<>();
+    public final Symbol                        currentLocation = new Symbol();
+    public final LinkedList<Component>         components      = new LinkedList<>();
+    public final LinkedList<Section>           sections        = new LinkedList<>();
+    public final HashMap<String, Symbol>       symbols         = new HashMap<>();
+    public final LinkedHashMap<String, String> includeFiles    = new LinkedHashMap<>();
     public final String src;
     public       String postPre;
 

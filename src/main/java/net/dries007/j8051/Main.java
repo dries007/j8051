@@ -109,7 +109,7 @@ public class Main
         if (!srcFile.exists()) srcFile = null;
         Main.srcFile = srcFile;
         PROPERTIES.setProperty(SRC_FILE, srcFile == null ? "" : srcFile.getAbsolutePath());
-        if (includeFile == null) includeFile = Main.srcFile.getParentFile();
+        if (includeFile == null && Main.srcFile != null) includeFile = Main.srcFile.getParentFile();
         saveProperties();
     }
 

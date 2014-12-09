@@ -43,7 +43,7 @@ import java.util.LinkedList;
 public class Section
 {
     private final ArrayList<Integer> hexList = new ArrayList<>();
-    public final Integer   startaddress;
+    public final Integer startaddress;
 
     public Section(Integer startaddress)
     {
@@ -87,7 +87,7 @@ public class Section
             {
                 if (i == 0 && j < startaddress % 16) continue;
                 if (hexList.size() == global) break;
-                line[1 + j] = String.format("%02X", hexList.get(global ++));
+                line[1 + j] = String.format("%02X", hexList.get(global++));
             }
             data.add(line);
         }

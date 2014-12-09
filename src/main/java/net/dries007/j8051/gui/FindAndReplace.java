@@ -77,7 +77,7 @@ public class FindAndReplace extends JDialog
     public  JCheckBox    alwaysOnTopCheckBox;
     public  JCheckBox    ignoreCaseCheckBox;
     public  JTree        resultsTree;
-    public  JSlider opacitySlider;
+    public  JSlider      opacitySlider;
 
     private Point mouseDownCompCoords;
     private Result lastResult = null;
@@ -447,8 +447,10 @@ public class FindAndReplace extends JDialog
         {
             switch (find(result, pattern, prev, startFromTopOfFile))
             {
-                case 0: return null;
-                case 1: return result;
+                case 0:
+                    return null;
+                case 1:
+                    return result;
             }
             if (!srcIncludesRadioButton.isSelected()) break;
             startFromTopOfFile = true;
