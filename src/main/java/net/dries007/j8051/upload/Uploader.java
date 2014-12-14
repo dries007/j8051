@@ -29,48 +29,28 @@
  *
  */
 
-package net.dries007.j8051.gui;
+package net.dries007.j8051.upload;
 
-import net.dries007.j8051.Main;
-import org.apache.commons.io.FilenameUtils;
+import gnu.io.NRSerialPort;
 
 import javax.swing.*;
-import java.io.File;
-import java.util.StringTokenizer;
-
-import static net.dries007.j8051.util.Constants.PROPERTIES;
-import static net.dries007.j8051.util.Constants.UPLOADCMD;
+import java.util.Set;
 
 /**
  * @author Dries007
  */
-public class UploadRunnable implements Runnable
+public abstract class Uploader
 {
-    public boolean running;
-
-    public UploadRunnable()
+    public static String[] getAvailableComPorts()
     {
-
+        Set<String> set = NRSerialPort.getAvailableSerialPorts();
+        return set.toArray(new String[set.size()]);
     }
 
-    @Override
-    public void run()
+    public static Uploader[] getAvailableTypes()
     {
-        running = true;
-        try
-        {
-            if (!PROPERTIES.containsKey(UPLOADCMD)) return;
-            File file = new File(Main.srcFile.getParentFile(), FilenameUtils.getBaseName(Main.srcFile.getName()) + ".hex");
-            StringTokenizer st = new StringTokenizer(PROPERTIES.getProperty(UPLOADCMD).replace("$filename", "\"" + file.getAbsolutePath() + "\""));
-            String[] cmdarray = new String[st.countTokens()];
-            for (int i = 0; st.hasMoreTokens(); i++) cmdarray[i] = st.nextToken();
-            Process process = new ProcessBuilder(cmdarray).inheritIO().start();
-            if (process.waitFor() != 0) JOptionPane.showMessageDialog(MainGui.MAIN_GUI.frame, "Upload process didn't exit with 0, but with " + process.exitValue(), "Upload error.", JOptionPane.ERROR_MESSAGE);
-        }
-        catch (Exception ex)
-        {
-            ex.printStackTrace();
-        }
-        running = false;
+        return new Uploader[]{new UploaderXC888()};
     }
+
+    public abstract void upload(String comPort, Integer baudRate, ProgressMonitor pm) throws Exception;
 }

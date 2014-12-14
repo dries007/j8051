@@ -65,6 +65,19 @@ public class Helper
         return stringBuilder.append(']').toString();
     }
 
+    public static String toHexString(byte[] data)
+    {
+        if (data == null) return "null";
+        StringBuilder stringBuilder = new StringBuilder(data.length * 5);
+        stringBuilder.append('[');
+        for (int i = 0; i < data.length; i++)
+        {
+            stringBuilder.append(String.format("0x%02X", data[i]));
+            if (i + 1 < data.length) stringBuilder.append(", ");
+        }
+        return stringBuilder.append(']').toString();
+    }
+
     public static int getBitAddress(final int regiser, final int bit)
     {
         if (bit < 0 || bit > 7) throw new NumberFormatException("Bit invalid: " + bit);

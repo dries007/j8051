@@ -65,7 +65,6 @@ public class Constants
     public static final String FIND_REGEX         = "find.regex";
     public static final String FIND_DOMAIN        = "find.domain";
     public static final String FIND_OPACITY       = "find.opacity";
-    public static final String AUTO_LOAD          = "auto.load";
     public static final String AUTO_COMPILE       = "auto.compile";
     public static final String AUTO_SAVE          = "auto.save";
     public static final String ENCODING           = "encoding";
@@ -77,7 +76,6 @@ public class Constants
     public static final String FONT_SIZE          = "font.size";
     public static final String TABSIZE            = "tabSize";
     public static final String INCLUDEDIR         = "includedir";
-    public static final String UPLOADCMD          = "uploadCmd";
     public static final String SYNTAX_NAME        = "text/8051";
     /*
      * Prefixes

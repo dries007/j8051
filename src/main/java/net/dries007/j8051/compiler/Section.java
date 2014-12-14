@@ -56,7 +56,7 @@ public class Section
         {
             final int length = Math.min(0x20, hexList.size() - 0x20 * i);
             final int address = (0x20 * i);
-            int sum = length + (address & 0xFF) + (address >>> 8) + 0x00;
+            int sum = length + (address & 0xFF) + (address >>> 8);
             StringBuilder line = new StringBuilder(75); // 75 = normal line length
             line.append(String.format(":%02X%04X00", length, startaddress + address));
             for (int j = 0; j < length; j++)

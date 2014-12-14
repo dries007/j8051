@@ -32,6 +32,7 @@ package net.dries007.j8051.gui;
 
 import net.dries007.j8051.Main;
 import net.dries007.j8051.compiler.components.Symbol;
+import net.dries007.j8051.upload.Uploader;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
@@ -92,6 +93,9 @@ public class MainGui
     public       RTextScrollPane      asmContentsScroll;
     public       RTextScrollPane      preTextScroll;
     public       JButton              findButton;
+    public       JComboBox<String>    comPortBox;
+    public       JComboBox<Integer>   baudRateBox;
+    public       JComboBox<Uploader>  deviceTypeBox;
     public       JCheckBoxMenuItem    autoSave;
     public       JCheckBoxMenuItem    autoCompile;
     public       JMenuItem            includeFolder;
@@ -100,10 +104,11 @@ public class MainGui
     public       JRadioButtonMenuItem encodingAnsi;
     public       JMenuItem            uploadCommand;
     public       JMenuItem            newFile;
+    public       JMenuItem            about;
 
     public HashMap<String, Symbol> symbolHashMap;
 
-    public UploadRunnable  uploadRunnable  = new UploadRunnable();
+    //public UploadRunnable  uploadRunnable  = new UploadRunnable();
     public CompileRunnable compileRunnable = new CompileRunnable();
 
     private MainGui()
@@ -130,7 +135,6 @@ public class MainGui
         tln = new TextLineNumber(preText);
         preTextScroll.setRowHeaderView(tln);
 
-        // DEBUG todo
         componentsTable.setDefaultRenderer(Object.class, new FluoCellRenderer()
         {
             @Override
@@ -325,26 +329,6 @@ public class MainGui
                 }
             }
         });
-        uploadCommand.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                try
-                {
-                    String cmd = (String) JOptionPane.showInputDialog(frame, "Upload command? Use '$filename' as replacement for the .hex file.", "Upload command", JOptionPane.QUESTION_MESSAGE, null, null, PROPERTIES.getProperty(UPLOADCMD));
-                    if (cmd != null)
-                    {
-                        PROPERTIES.setProperty(UPLOADCMD, cmd);
-                        saveProperties();
-                    }
-                }
-                catch (NumberFormatException ex)
-                {
-                    ex.printStackTrace();
-                }
-            }
-        });
         includeFolder.addActionListener(new ActionListener()
         {
             @Override
@@ -445,6 +429,24 @@ public class MainGui
                 }
             }
         });
+        about.addActionListener(new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                try
+                {
+                    new About();
+                }
+                catch (IOException e1)
+                {
+                    e1.printStackTrace();
+                }
+            }
+        });
+        comPortBox.setModel(new DefaultComboBoxModel<>(Uploader.getAvailableComPorts()));
+        baudRateBox.setModel(new DefaultComboBoxModel<>(new Integer[]{9600, 19200, 57600, 115200}));
+        deviceTypeBox.setModel(new DefaultComboBoxModel<>(Uploader.getAvailableTypes()));
     }
 
     public void init()
@@ -488,7 +490,34 @@ public class MainGui
 
     public void upload()
     {
-        if (!uploadRunnable.running) new Thread(uploadRunnable).start();
+        final ProgressMonitor pm = new ProgressMonitor(MainGui.MAIN_GUI.frame, "Uploading to µC", "Initializing COM", 0, 100);
+        pm.setMillisToPopup(1);
+        pm.setMillisToDecideToPopup(1);
+        new Thread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    ((Uploader) deviceTypeBox.getSelectedItem()).upload(((String) comPortBox.getSelectedItem()), ((Integer) baudRateBox.getSelectedItem()), pm);
+                }
+                catch (Throwable e)
+                {
+                    e.printStackTrace();
+                    StringBuilder message = new StringBuilder();
+                    do
+                    {
+                        message.append('\n').append(e.toString());
+                    } while ((e = e.getCause()) != null);
+                    JOptionPane.showMessageDialog(frame, message.substring(1), "Error while uploading", JOptionPane.ERROR_MESSAGE);
+                }
+                finally
+                {
+                    pm.close();
+                }
+            }
+        }).start();
     }
 
     public void compile()
@@ -585,9 +614,6 @@ public class MainGui
         includeFolder = new JMenuItem("Include folder...");
         optionsMenu.add(includeFolder);
 
-        uploadCommand = new JMenuItem("Upload command...");
-        optionsMenu.add(uploadCommand);
-
         optionsMenu.addSeparator();
 
         autoSave = new JCheckBoxMenuItem("Auto save");
@@ -599,6 +625,14 @@ public class MainGui
         optionsMenu.add(autoCompile);
 
         menuBar.add(optionsMenu);
+
+        // Helpmenu
+        JMenu helpMenu = new JMenu("Help");
+
+        about = new JMenuItem("About...");
+        helpMenu.add(about);
+
+        menuBar.add(helpMenu);
     }
 
     public boolean isAutoCompiling()
@@ -774,15 +808,6 @@ public class MainGui
         final JPanel panel7 = new JPanel();
         panel7.setLayout(new GridBagLayout());
         toolBar1.add(panel7);
-        uploadButton = new JButton();
-        uploadButton.setIcon(new ImageIcon(getClass().getResource("/icon/upload.png")));
-        uploadButton.setText("");
-        uploadButton.setToolTipText("Upload (F6)");
-        gbc = new GridBagConstraints();
-        gbc.gridx = 2;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST;
-        panel7.add(uploadButton, gbc);
         saveButton = new JButton();
         saveButton.setIcon(new ImageIcon(getClass().getResource("/icon/disk.png")));
         saveButton.setText("");
@@ -805,17 +830,73 @@ public class MainGui
         findButton.setIcon(new ImageIcon(getClass().getResource("/icon/search.png")));
         findButton.setText("");
         gbc = new GridBagConstraints();
-        gbc.gridx = 3;
+        gbc.gridx = 2;
         gbc.gridy = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         panel7.add(findButton, gbc);
+        uploadButton = new JButton();
+        uploadButton.setIcon(new ImageIcon(getClass().getResource("/icon/upload.png")));
+        uploadButton.setText("");
+        uploadButton.setToolTipText("Upload (F6)");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 10;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        panel7.add(uploadButton, gbc);
         final JPanel spacer1 = new JPanel();
         gbc = new GridBagConstraints();
-        gbc.gridx = 4;
+        gbc.gridx = 3;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         panel7.add(spacer1, gbc);
+        comPortBox = new JComboBox();
+        final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
+        comPortBox.setModel(defaultComboBoxModel1);
+        gbc = new GridBagConstraints();
+        gbc.gridx = 5;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(0, 5, 0, 0);
+        panel7.add(comPortBox, gbc);
+        baudRateBox = new JComboBox();
+        gbc = new GridBagConstraints();
+        gbc.gridx = 7;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(0, 5, 0, 5);
+        panel7.add(baudRateBox, gbc);
+        final JLabel label2 = new JLabel();
+        label2.setText("Upload to");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 4;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        panel7.add(label2, gbc);
+        final JLabel label3 = new JLabel();
+        label3.setText(" at ");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 6;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        panel7.add(label3, gbc);
+        final JLabel label4 = new JLabel();
+        label4.setText("baud for device");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 8;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        panel7.add(label4, gbc);
+        deviceTypeBox = new JComboBox();
+        gbc = new GridBagConstraints();
+        gbc.gridx = 9;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(0, 5, 0, 5);
+        panel7.add(deviceTypeBox, gbc);
     }
 
     /**
